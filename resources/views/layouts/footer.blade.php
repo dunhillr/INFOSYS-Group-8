@@ -1,0 +1,1 @@
+<footer class="footer mt-auto py-3 text-center"><div class="container"><span class="text-muted">Copyright © {{ now()->year }} Bobong Ice Plant. All rights reserved.</span></div></footer>

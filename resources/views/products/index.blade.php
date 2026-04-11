@@ -1,0 +1,6 @@
+@extends('layouts.app')
+@section('title', 'Products')
+@section('content')
+<div class="block justify-between page-header md:flex mt-4"><div><h3 class="!text-defaulttextcolor dark:!text-defaulttextcolor/70 font-semibold">Products</h3></div><div><a href="{{ route('products.create') }}" class="ti-btn ti-btn-primary-full">Add Product</a></div></div>
+<div class="box"><div class="box-body"><div class="overflow-auto"><table class="table min-w-full whitespace-nowrap table-bordered"><thead><tr><th>Name</th><th>Code</th><th>Default Price</th><th>Status</th><th width="150">Actions</th></tr></thead><tbody>@forelse ($products as $product)<tr><td>{{ $product->product_name }}</td><td>{{ $product->product_code ?? '-' }}</td><td>{{ number_format($product->default_price, 2) }}</td><td>{{ $product->is_active ? 'Active' : 'Inactive' }}</td><td><a href="{{ route('products.edit', $product) }}" class="ti-btn ti-btn-info-full ti-btn-sm">Edit</a><form action="{{ route('products.destroy', $product) }}" method="POST" class="inline-block" onsubmit="return confirm('Delete this product?')">@csrf @method('DELETE')<button class="ti-btn ti-btn-danger-full ti-btn-sm">Delete</button></form></td></tr>@empty <tr><td colspan="5" class="text-center">No products found.</td></tr>@endforelse</tbody></table></div>{{ $products->links() }}</div></div>
+@endsection

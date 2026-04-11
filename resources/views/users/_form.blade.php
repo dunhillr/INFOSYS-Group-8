@@ -1,0 +1,8 @@
+<div class="grid grid-cols-12 gap-4">
+<div class="xl:col-span-6 col-span-12"><label class="form-label">Name</label><input type="text" name="name" class="form-control" value="{{ old('name', $user->name ?? '') }}" required></div>
+<div class="xl:col-span-6 col-span-12"><label class="form-label">Username</label><input type="text" name="username" class="form-control" value="{{ old('username', $user->username ?? '') }}" required></div>
+<div class="xl:col-span-6 col-span-12"><label class="form-label">Email</label><input type="email" name="email" class="form-control" value="{{ old('email', $user->email ?? '') }}"></div>
+<div class="xl:col-span-6 col-span-12"><label class="form-label">Password {{ isset($user) ? '(leave blank to keep current password)' : '' }}</label><input type="password" name="password" class="form-control" {{ isset($user) ? '' : 'required' }}></div>
+<div class="xl:col-span-6 col-span-12"><label class="form-label">Role</label><select name="user_type" class="form-control" required><option value="owner" @selected(old('user_type', $user->user_type ?? 'employee') === 'owner')>Owner</option><option value="employee" @selected(old('user_type', $user->user_type ?? 'employee') === 'employee')>Employee</option></select></div>
+<div class="xl:col-span-12 col-span-12"><div class="form-check"><input type="hidden" name="is_active" value="0"><input class="form-check-input" type="checkbox" name="is_active" value="1" id="user_is_active" @checked(old('is_active', $user->is_active ?? true))><label class="form-check-label" for="user_is_active">Active</label></div></div>
+</div>

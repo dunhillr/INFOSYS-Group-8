@@ -1,0 +1,6 @@
+@extends('layouts.app')
+@section('title', 'Customers')
+@section('content')
+<div class="block justify-between page-header md:flex mt-4"><div><h3 class="!text-defaulttextcolor dark:!text-defaulttextcolor/70 font-semibold">Customers</h3></div><div><a href="{{ route('customers.create') }}" class="ti-btn ti-btn-primary-full">Add Customer</a></div></div>
+<div class="box"><div class="box-body"><div class="overflow-auto"><table class="table min-w-full whitespace-nowrap table-bordered"><thead><tr><th>Name</th><th>Contact</th><th>Address</th><th>Type</th><th width="150">Actions</th></tr></thead><tbody>@forelse($customers as $customer)<tr><td>{{ $customer->customer_name }}</td><td>{{ $customer->customer_contact ?? '-' }}</td><td>{{ $customer->customer_address }}</td><td>{{ ucfirst($customer->customer_type) }}</td><td><a href="{{ route('customers.edit', $customer) }}" class="ti-btn ti-btn-info-full ti-btn-sm">Edit</a><form action="{{ route('customers.destroy', $customer) }}" method="POST" class="inline-block" onsubmit="return confirm('Delete this record?')">@csrf @method('DELETE')<button class="ti-btn ti-btn-danger-full ti-btn-sm">Delete</button></form></td></tr>@empty <tr><td colspan="5" class="text-center">No customers found.</td></tr>@endforelse</tbody></table></div>{{ $customers->links() }}</div></div>
+@endsection

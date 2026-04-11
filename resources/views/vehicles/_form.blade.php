@@ -1,0 +1,6 @@
+<div class="grid grid-cols-12 gap-4">
+<div class="xl:col-span-6 col-span-12"><label class="form-label">Vehicle Name</label><input type="text" name="vehicle_name" class="form-control" value="{{ old('vehicle_name', $vehicle->vehicle_name ?? '') }}" required></div>
+<div class="xl:col-span-6 col-span-12"><label class="form-label">Plate Number</label><input type="text" name="plate_number" class="form-control" value="{{ old('plate_number', $vehicle->plate_number ?? '') }}"></div>
+<div class="xl:col-span-6 col-span-12"><label class="form-label">Capacity</label><input type="number" step="0.01" min="0" name="capacity" class="form-control" value="{{ old('capacity', $vehicle->capacity ?? '') }}"></div>
+<div class="xl:col-span-6 col-span-12"><label class="form-label">Status</label><select name="status" class="form-control" required><option value="available" @selected(old('status', $vehicle->status ?? 'available') === 'available')>Available</option><option value="in_use" @selected(old('status', $vehicle->status ?? '') === 'in_use')>In Use</option><option value="maintenance" @selected(old('status', $vehicle->status ?? '') === 'maintenance')>Maintenance</option></select></div>
+</div>
