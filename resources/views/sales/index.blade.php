@@ -1,11 +1,158 @@
 @extends('layouts.app')
 @section('title', 'Sales')
+
 @section('content')
-<div class="block justify-between page-header md:flex mt-4"><div><h3 class="!text-defaulttextcolor dark:!text-defaulttextcolor/70 font-semibold">Sales</h3></div><div><a href="{{ route('sales.create') }}" class="ti-btn ti-btn-primary-full">Add Sale</a></div></div>
-<div class="box"><div class="box-body"><div class="overflow-auto"><table class="table min-w-full whitespace-nowrap table-bordered"><thead><tr><th>Sale No.</th><th>Product</th><th>Customer</th><th>Type</th><th>Quantity</th><th>Unit Price</th><th>Total</th><th>Payment</th><th>Date</th><th width="150">Actions</th></tr></thead><tbody>
-@forelse ($sales as $sale)
-<tr><td>{{ $sale->sale_number }}</td><td>{{ $sale->product->product_name ?? '-' }}</td><td>{{ $sale->customer->customer_name ?? 'Walk-in' }}</td><td>{{ ucfirst($sale->sale_type) }}</td><td>{{ number_format($sale->quantity, 2) }}</td><td>{{ number_format($sale->unit_price, 2) }}</td><td>{{ number_format($sale->total_amount, 2) }}</td><td>{{ ucfirst($sale->payment_status) }}</td><td>{{ $sale->sale_date?->format('M d, Y h:i A') }}</td><td><a href="{{ route('sales.edit', $sale) }}" class="ti-btn ti-btn-info-full ti-btn-sm">Edit</a><form action="{{ route('sales.destroy', $sale) }}" method="POST" class="inline-block" onsubmit="return confirm('Delete this sale record?')">@csrf @method('DELETE')<button class="ti-btn ti-btn-danger-full ti-btn-sm">Delete</button></form></td></tr>
-@empty <tr><td colspan="10" class="text-center">No sales records found.</td></tr>
-@endforelse
-</tbody></table></div>{{ $sales->links() }}</div></div>
+
+<!-- PAGE HEADER -->
+<div class="flex justify-between items-center mt-4 mb-6">
+
+    <!-- LEFT: LOGO + TITLE -->
+    <div class="flex items-center gap-3">
+
+        <img src="{{ asset('images/logo.png') }}" 
+             alt="Logo" 
+             class="h-10 w-auto object-contain">
+
+        <div>
+            <h3 class="text-2xl font-bold text-gray-800">
+                Sales
+            </h3>
+            <p class="text-sm text-gray-500">
+                Manage sales transactions
+            </p>
+        </div>
+
+    </div>
+
+    <!-- RIGHT: ADD BUTTON -->
+    <a href="{{ route('sales.create') }}" 
+       class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition">
+        + Add Sale
+    </a>
+
+</div>
+
+<!-- TABLE CARD -->
+<div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+
+    <!-- HEADER -->
+    <div class="bg-blue-600 text-white px-5 py-3 font-semibold">
+        Sales Records
+    </div>
+
+    <!-- TABLE -->
+    <div class="p-5 overflow-auto">
+
+        <table class="min-w-full whitespace-nowrap text-sm">
+
+            <thead>
+                <tr class="text-left border-b text-gray-600">
+                    <th class="py-3">Sale No.</th>
+                    <th>Product</th>
+                    <th>Customer</th>
+                    <th>Type</th>
+                    <th>Quantity</th>
+                    <th>Unit Price</th>
+                    <th>Total</th>
+                    <th>Payment</th>
+                    <th>Date</th>
+                    <th width="150">Actions</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                @forelse ($sales as $sale)
+                <tr class="border-b hover:bg-gray-50 transition">
+
+                    <td class="py-3 font-medium text-gray-800">
+                        {{ $sale->sale_number }}
+                    </td>
+
+                    <td class="text-gray-800">
+                        {{ $sale->product->product_name ?? '-' }}
+                    </td>
+
+                    <td class="text-gray-600">
+                        {{ $sale->customer->customer_name ?? 'Walk-in' }}
+                    </td>
+
+                    <td class="text-gray-600">
+                        {{ ucfirst($sale->sale_type) }}
+                    </td>
+
+                    <td class="text-gray-800">
+                        {{ number_format($sale->quantity, 2) }}
+                    </td>
+
+                    <td class="text-gray-800">
+                        {{ number_format($sale->unit_price, 2) }}
+                    </td>
+
+                    <td class="text-blue-600 font-semibold">
+                        {{ number_format($sale->total_amount, 2) }}
+                    </td>
+
+                    <td>
+                        @if($sale->payment_status === 'paid')
+                            <span class="px-3 py-1 text-xs bg-green-100 text-green-700 rounded-full">
+                                Paid
+                            </span>
+                        @elseif($sale->payment_status === 'pending')
+                            <span class="px-3 py-1 text-xs bg-yellow-100 text-yellow-700 rounded-full">
+                                Pending
+                            </span>
+                        @else
+                            <span class="px-3 py-1 text-xs bg-red-100 text-red-700 rounded-full">
+                                Unpaid
+                            </span>
+                        @endif
+                    </td>
+
+                    <td class="text-gray-600">
+                        {{ $sale->sale_date?->format('M d, Y h:i A') }}
+                    </td>
+
+                    <td class="flex gap-2 py-3">
+
+                        <a href="{{ route('sales.edit', $sale) }}"
+                           class="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600">
+                            Edit
+                        </a>
+
+                        <form action="{{ route('sales.destroy', $sale) }}" 
+                              method="POST" 
+                              onsubmit="return confirm('Delete this sale record?')">
+                            @csrf 
+                            @method('DELETE')
+
+                            <button class="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600">
+                                Delete
+                            </button>
+                        </form>
+
+                    </td>
+
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="10" class="text-center py-6 text-gray-400">
+                        No sales records found.
+                    </td>
+                </tr>
+                @endforelse
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+    <!-- PAGINATION -->
+    <div class="p-4 border-t">
+        {{ $sales->links() }}
+    </div>
+
+</div>
+
 @endsection
