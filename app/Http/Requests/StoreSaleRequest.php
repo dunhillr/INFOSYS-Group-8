@@ -16,6 +16,7 @@ class StoreSaleRequest extends FormRequest
         return [
             'product_id' => ['nullable', 'exists:products,id'],
             'customer_id' => ['nullable', 'exists:customers,id'],
+            'vehicle_id' => ['nullable', 'exists:vehicles,id'],
             'sale_date' => ['required', 'date'],
             'sale_type' => ['required', 'in:retail,wholesale'],
             'quantity' => ['required', 'numeric', 'min:0.01'],
