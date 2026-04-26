@@ -118,4 +118,11 @@ class SaleController extends Controller
 
         return redirect()->route('sales.index')->with('success', 'Sale deleted successfully.');
     }
+    public function history(): View
+    {
+        $sales = Sale::with(['product', 'customer', 'vehicle', 'user'])
+            ->orderByDesc('sale_date')
+            ->paginate(15);
+        return view('sales.history', compact('sales'));
+    }
 }
