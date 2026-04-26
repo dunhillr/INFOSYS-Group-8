@@ -16,6 +16,7 @@ class StoreProductionRequest extends FormRequest
         return [
             'production_date' => ['required', 'date'],
             'batch_reference' => ['nullable', 'string', 'max:255'],
+            'product_id' => ['required', 'exists:products,id'],
             'quantity_produced' => ['required', 'numeric', 'min:0.01'],
             'remarks' => ['nullable', 'string'],
         ];

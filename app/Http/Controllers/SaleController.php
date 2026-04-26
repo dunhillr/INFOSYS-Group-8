@@ -44,10 +44,11 @@ class SaleController extends Controller
                 $data = $request->validated();
                 $quantity = (float) $data['quantity'];
                 $unitPrice = (float) $data['unit_price'];
+                $productId = $data['product_id'] ?? null;
 
                 $sale = Sale::create([
                     'sale_number' => 'SAL-'.now()->format('YmdHis').'-'.rand(100, 999),
-                    'product_id' => $data['product_id'] ?? null,
+                    'product_id' => $productId,
                     'customer_id' => $data['customer_id'] ?? null,
                     'vehicle_id' => $data['vehicle_id'] ?? null,
                     'sale_date' => $data['sale_date'],
@@ -65,7 +66,7 @@ class SaleController extends Controller
                     Vehicle::where('id', $data['vehicle_id'])->update(['status' => 'in_use']);
                 }
 
-                $this->inventoryService->deductStock($quantity, 'sale', $sale->id, Auth::id(), 'Sale stock deduction');
+                $this->inventoryService->deductStock($quantity, 'sale', $sale->id, Auth::id(), 'Sale stock deduction', $productId ? (int) $productId : null);
                 ActivityLogService::log(Auth::id(), 'create', 'sales', 'Created sale #'.$sale->id, $request);
             });
         } catch (RuntimeException $exception) {
@@ -92,12 +93,15 @@ class SaleController extends Controller
                 $unitPrice = (float) $data['unit_price'];
                 $oldQuantity = (float) $sale->quantity;
                 $oldVehicleId = $sale->vehicle_id;
+                $oldProductId = $sale->product_id;
+                $newProductId = $data['product_id'] ?? null;
 
-                $this->inventoryService->addStock($oldQuantity, 'sale_update_reversal', $sale->id, Auth::id(), 'Reversed previous sale quantity before update');
-                $this->inventoryService->deductStock($newQuantity, 'sale_update', $sale->id, Auth::id(), 'Applied updated sale quantity');
+                // Reverse old stock, apply new stock
+                $this->inventoryService->addStock($oldQuantity, 'sale_update_reversal', $sale->id, Auth::id(), 'Reversed previous sale quantity before update', $oldProductId ? (int) $oldProductId : null);
+                $this->inventoryService->deductStock($newQuantity, 'sale_update', $sale->id, Auth::id(), 'Applied updated sale quantity', $newProductId ? (int) $newProductId : null);
 
                 $sale->update([
-                    'product_id' => $data['product_id'] ?? null,
+                    'product_id' => $newProductId,
                     'customer_id' => $data['customer_id'] ?? null,
                     'vehicle_id' => $data['vehicle_id'] ?? null,
                     'sale_date' => $data['sale_date'],
@@ -137,7 +141,7 @@ class SaleController extends Controller
     public function destroy(Request $request, Sale $sale): RedirectResponse
     {
         DB::transaction(function () use ($request, $sale) {
-            $this->inventoryService->addStock((float) $sale->quantity, 'sale_delete_reversal', $sale->id, Auth::id(), 'Deleted sale stock restored');
+            $this->inventoryService->addStock((float) $sale->quantity, 'sale_delete_reversal', $sale->id, Auth::id(), 'Deleted sale stock restored', $sale->product_id ? (int) $sale->product_id : null);
             
             // Revert vehicle status back to "available" if a vehicle was assigned
             if ($sale->vehicle_id) {

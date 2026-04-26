@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\Inventory;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -31,13 +30,7 @@ class DatabaseSeeder extends Seeder
         // 2. Create additional users
         $this->call(UserSeeder::class);
 
-        // 3. Initialize inventory
-        Inventory::firstOrCreate([], [
-            'current_stock' => 0,
-            'low_stock_threshold' => 100,
-        ]);
-
-        // 4. Seed products, customers, and vehicles
+        // 3. Seed products, customers, and vehicles (inventory is auto-created per product)
         $this->call(ProductSeeder::class);
         $this->call(CustomerSeeder::class);
         $this->call(VehicleSeeder::class);

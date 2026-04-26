@@ -29,25 +29,16 @@
 <!-- STATS CARDS -->
 <div class="grid grid-cols-12 gap-6">
 
-    <div class="xl:col-span-3 col-span-12">
+    <div class="xl:col-span-4 col-span-12">
         <div class="bg-white border-l-4 border-blue-500 rounded-xl shadow-sm p-5 hover:shadow-md transition">
-            <p class="text-sm text-gray-500">Current Stock</p>
-            <h4 class="text-2xl font-bold text-blue-600">
-                {{ number_format($inventory?->current_stock ?? 0, 2) }}
-            </h4>
-        </div>
-    </div>
-
-    <div class="xl:col-span-3 col-span-12">
-        <div class="bg-white border-l-4 border-blue-500 rounded-xl shadow-sm p-5 hover:shadow-md transition">
-            <p class="text-sm text-gray-500">Today Production</p>
+            <p class="text-sm text-gray-500">Today Production (All Products)</p>
             <h4 class="text-2xl font-bold text-blue-600">
                 {{ number_format($todayProduction, 2) }}
             </h4>
         </div>
     </div>
 
-    <div class="xl:col-span-3 col-span-12">
+    <div class="xl:col-span-4 col-span-12">
         <div class="bg-white border-l-4 border-blue-500 rounded-xl shadow-sm p-5 hover:shadow-md transition">
             <p class="text-sm text-gray-500">Today Sales</p>
             <h4 class="text-2xl font-bold text-blue-600">
@@ -56,7 +47,7 @@
         </div>
     </div>
 
-    <div class="xl:col-span-3 col-span-12">
+    <div class="xl:col-span-4 col-span-12">
         <div class="bg-white border-l-4 border-blue-500 rounded-xl shadow-sm p-5 hover:shadow-md transition">
             <p class="text-sm text-gray-500">Pending Deliveries</p>
             <h4 class="text-2xl font-bold text-blue-600">
@@ -66,6 +57,49 @@
     </div>
 
 </div>
+
+<!-- AVAILABLE STOCK PER PRODUCT -->
+@if($inventories->count())
+<div class="mt-6">
+    <h4 class="text-lg font-semibold text-gray-700 mb-3">Available Stock per Product</h4>
+    <div class="grid grid-cols-12 gap-4">
+        @foreach($inventories as $inv)
+            <div class="xl:col-span-3 md:col-span-4 col-span-6">
+                <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 
+                    {{ (float) $inv->current_stock <= (float) $inv->low_stock_threshold ? 'border-red-500' : 'border-green-500' }}
+                    hover:shadow-md transition">
+                    <p class="text-xs text-gray-500 uppercase tracking-wide">{{ $inv->product->product_name ?? 'Unknown' }}</p>
+                    <h4 class="text-xl font-bold mt-1 
+                        {{ (float) $inv->current_stock <= (float) $inv->low_stock_threshold ? 'text-red-600' : 'text-green-600' }}">
+                        {{ number_format($inv->current_stock, 2) }}
+                    </h4>
+                    <p class="text-xs text-gray-400 mt-1">Available</p>
+                </div>
+            </div>
+        @endforeach
+    </div>
+</div>
+@endif
+
+<!-- TODAY'S PRODUCTION BREAKDOWN -->
+@if($todayProductionByProduct->count())
+<div class="mt-6">
+    <h4 class="text-lg font-semibold text-gray-700 mb-3">Today's Production Breakdown</h4>
+    <div class="grid grid-cols-12 gap-4">
+        @foreach($todayProductionByProduct as $item)
+            <div class="xl:col-span-3 md:col-span-4 col-span-6">
+                <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-blue-400 hover:shadow-md transition">
+                    <p class="text-xs text-gray-500 uppercase tracking-wide">{{ $item->product->product_name ?? 'Unknown' }}</p>
+                    <h4 class="text-xl font-bold mt-1 text-blue-600">
+                        {{ number_format($item->total_produced, 2) }}
+                    </h4>
+                    <p class="text-xs text-gray-400 mt-1">Produced Today</p>
+                </div>
+            </div>
+        @endforeach
+    </div>
+</div>
+@endif
 
 <!-- CONTENT SECTION -->
 <div class="grid grid-cols-12 gap-6 mt-8">
