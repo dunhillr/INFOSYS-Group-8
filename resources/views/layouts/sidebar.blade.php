@@ -67,6 +67,15 @@
                 </a>
             </li>
 
+            <!-- SALES HISTORY -->
+            <li>
+                <a href="{{ route('sales.history') }}" 
+                   class="flex items-center gap-3 px-4 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition ml-2">
+                    <i class="bx bx-history text-lg text-blue-500"></i>
+                    <span>Sales History</span>
+                </a>
+            </li>
+
             <!-- VEHICLES -->
             <li>
                 <a href="{{ route('vehicles.index') }}" 
