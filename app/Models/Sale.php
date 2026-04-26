@@ -5,11 +5,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property int $id
+ * @property float $quantity 
+ */
+
 class Sale extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['sale_number','product_id','customer_id','sale_date','sale_type','quantity','unit_price','total_amount','payment_status','notes','user_id'];
+    protected $fillable = ['sale_number','product_id','customer_id','vehicle_id','sale_date','sale_type','quantity','unit_price','total_amount','payment_status','notes','user_id'];
 
     protected function casts(): array
     {
@@ -18,6 +23,7 @@ class Sale extends Model
 
     public function product(){ return $this->belongsTo(Product::class); }
     public function customer(){ return $this->belongsTo(Customer::class); }
+    public function vehicle(){ return $this->belongsTo(Vehicle::class); }
     public function user(){ return $this->belongsTo(User::class); }
     public function delivery(){ return $this->hasOne(Delivery::class); }
 }
