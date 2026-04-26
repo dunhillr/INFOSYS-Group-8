@@ -23,6 +23,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('customers', CustomerController::class)->except('show');
     Route::resource('productions', ProductionController::class)->except('show');
     Route::resource('sales', SaleController::class)->except('show');
+    Route::get('/sales-history', [SaleController::class, 'history'])->name('sales.history');
     Route::resource('vehicles', VehicleController::class)->except('show');
     Route::resource('deliveries', DeliveryController::class)->except('show');
 
