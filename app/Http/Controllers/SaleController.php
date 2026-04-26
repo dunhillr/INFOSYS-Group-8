@@ -46,6 +46,19 @@ class SaleController extends Controller
                 $unitPrice = (float) $data['unit_price'];
                 $productId = $data['product_id'] ?? null;
 
+                $totalAmount = $quantity * $unitPrice;
+                $paymentStatus = $data['payment_status'];
+                $amountPaid = 0;
+                $balanceDue = $totalAmount;
+
+                if ($paymentStatus === 'paid') {
+                    $amountPaid = $totalAmount;
+                    $balanceDue = 0;
+                } elseif ($paymentStatus === 'partial') {
+                    $amountPaid = (float) ($data['amount_paid'] ?? 0);
+                    $balanceDue = max(0, $totalAmount - $amountPaid);
+                }
+
                 $sale = Sale::create([
                     'sale_number' => 'SAL-'.now()->format('YmdHis').'-'.rand(100, 999),
                     'product_id' => $productId,
@@ -55,8 +68,11 @@ class SaleController extends Controller
                     'sale_type' => $data['sale_type'],
                     'quantity' => $quantity,
                     'unit_price' => $unitPrice,
-                    'total_amount' => $quantity * $unitPrice,
-                    'payment_status' => $data['payment_status'],
+                    'total_amount' => $totalAmount,
+                    'payment_status' => $paymentStatus,
+                    'amount_paid' => $amountPaid,
+                    'balance_due' => $balanceDue,
+                    'payment_method' => $data['payment_method'] ?? null,
                     'notes' => $data['notes'] ?? null,
                     'user_id' => Auth::id(),
                 ]);
@@ -100,6 +116,19 @@ class SaleController extends Controller
                 $this->inventoryService->addStock($oldQuantity, 'sale_update_reversal', $sale->id, Auth::id(), 'Reversed previous sale quantity before update', $oldProductId ? (int) $oldProductId : null);
                 $this->inventoryService->deductStock($newQuantity, 'sale_update', $sale->id, Auth::id(), 'Applied updated sale quantity', $newProductId ? (int) $newProductId : null);
 
+                $totalAmount = $newQuantity * $unitPrice;
+                $paymentStatus = $data['payment_status'];
+                $amountPaid = 0;
+                $balanceDue = $totalAmount;
+
+                if ($paymentStatus === 'paid') {
+                    $amountPaid = $totalAmount;
+                    $balanceDue = 0;
+                } elseif ($paymentStatus === 'partial') {
+                    $amountPaid = (float) ($data['amount_paid'] ?? 0);
+                    $balanceDue = max(0, $totalAmount - $amountPaid);
+                }
+
                 $sale->update([
                     'product_id' => $newProductId,
                     'customer_id' => $data['customer_id'] ?? null,
@@ -108,8 +137,11 @@ class SaleController extends Controller
                     'sale_type' => $data['sale_type'],
                     'quantity' => $newQuantity,
                     'unit_price' => $unitPrice,
-                    'total_amount' => $newQuantity * $unitPrice,
-                    'payment_status' => $data['payment_status'],
+                    'total_amount' => $totalAmount,
+                    'payment_status' => $paymentStatus,
+                    'amount_paid' => $amountPaid,
+                    'balance_due' => $balanceDue,
+                    'payment_method' => $data['payment_method'] ?? null,
                     'notes' => $data['notes'] ?? null,
                 ]);
 

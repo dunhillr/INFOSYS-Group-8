@@ -22,6 +22,8 @@ class StoreSaleRequest extends FormRequest
             'quantity' => ['required', 'numeric', 'min:0.01'],
             'unit_price' => ['required', 'numeric', 'min:0'],
             'payment_status' => ['required', 'in:paid,partial,unpaid'],
+            'amount_paid' => ['nullable', 'numeric', 'min:0'],
+            'payment_method' => ['nullable', 'string', 'max:50'],
             'notes' => ['nullable', 'string'],
         ];
     }

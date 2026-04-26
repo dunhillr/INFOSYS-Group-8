@@ -14,11 +14,11 @@ class Sale extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['sale_number','product_id','customer_id','vehicle_id','sale_date','sale_type','quantity','unit_price','total_amount','payment_status','notes','user_id'];
+    protected $fillable = ['sale_number','product_id','customer_id','vehicle_id','sale_date','sale_type','quantity','unit_price','total_amount','payment_status','amount_paid','balance_due','payment_method','notes','user_id'];
 
     protected function casts(): array
     {
-        return ['sale_date' => 'datetime', 'quantity' => 'decimal:2', 'unit_price' => 'decimal:2', 'total_amount' => 'decimal:2'];
+        return ['sale_date' => 'datetime', 'quantity' => 'decimal:2', 'unit_price' => 'decimal:2', 'total_amount' => 'decimal:2', 'amount_paid' => 'decimal:2', 'balance_due' => 'decimal:2'];
     }
 
     public function product(){ return $this->belongsTo(Product::class); }

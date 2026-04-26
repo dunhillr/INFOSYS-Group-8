@@ -98,14 +98,20 @@
                             <span class="px-3 py-1 text-xs bg-green-100 text-green-700 rounded-full">
                                 Paid
                             </span>
-                        @elseif($sale->payment_status === 'pending')
+                        @elseif($sale->payment_status === 'partial')
                             <span class="px-3 py-1 text-xs bg-yellow-100 text-yellow-700 rounded-full">
-                                Pending
+                                Partial
                             </span>
+                            <div class="text-xs text-gray-500 mt-1">Bal: {{ number_format($sale->balance_due, 2) }}</div>
                         @else
                             <span class="px-3 py-1 text-xs bg-red-100 text-red-700 rounded-full">
                                 Unpaid
                             </span>
+                            <div class="text-xs text-gray-500 mt-1">Bal: {{ number_format($sale->balance_due, 2) }}</div>
+                        @endif
+                        
+                        @if($sale->payment_method)
+                            <div class="text-xs text-blue-500 mt-1 font-medium">{{ $sale->payment_method }}</div>
                         @endif
                     </td>
 

@@ -95,14 +95,32 @@
         <input type="number" step="0.01" min="0" name="unit_price" class="form-control" value="{{ old('unit_price', $sale->unit_price ?? '') }}" required>
     </div>
 
+    <!-- Payment Method -->
+    <div class="xl:col-span-6 col-span-12">
+        <label class="form-label">Payment Method</label>
+        <select name="payment_method" class="form-control">
+            <option value="">Select Method (Optional)</option>
+            <option value="Cash" @selected(old('payment_method', $sale->payment_method ?? '') === 'Cash')>Cash</option>
+            <option value="GCash" @selected(old('payment_method', $sale->payment_method ?? '') === 'GCash')>GCash</option>
+            <option value="Bank Transfer" @selected(old('payment_method', $sale->payment_method ?? '') === 'Bank Transfer')>Bank Transfer</option>
+            <option value="Cheque" @selected(old('payment_method', $sale->payment_method ?? '') === 'Cheque')>Cheque</option>
+        </select>
+    </div>
+
     <!-- Payment Status -->
     <div class="xl:col-span-6 col-span-12">
         <label class="form-label">Payment Status</label>
-        <select name="payment_status" class="form-control" required>
+        <select name="payment_status" id="payment_status" class="form-control" required>
             <option value="paid" @selected(old('payment_status', $sale->payment_status ?? 'paid') === 'paid')>Paid</option>
             <option value="partial" @selected(old('payment_status', $sale->payment_status ?? '') === 'partial')>Partial</option>
             <option value="unpaid" @selected(old('payment_status', $sale->payment_status ?? '') === 'unpaid')>Unpaid</option>
         </select>
+    </div>
+
+    <!-- Amount Paid (Visible only when Partial) -->
+    <div class="xl:col-span-6 col-span-12" id="amount_paid_container" style="display: {{ old('payment_status', $sale->payment_status ?? '') === 'partial' ? 'block' : 'none' }};">
+        <label class="form-label">Amount Paid</label>
+        <input type="number" step="0.01" min="0" name="amount_paid" id="amount_paid" class="form-control" value="{{ old('amount_paid', $sale->amount_paid ?? '') }}">
     </div>
 
     <!-- Notes -->
@@ -111,3 +129,26 @@
         <textarea name="notes" class="form-control" rows="4">{{ old('notes', $sale->notes ?? '') }}</textarea>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const paymentStatus = document.getElementById('payment_status');
+        const amountPaidContainer = document.getElementById('amount_paid_container');
+        const amountPaidInput = document.getElementById('amount_paid');
+
+        if(paymentStatus && amountPaidContainer && amountPaidInput) {
+            function toggleAmountPaid() {
+                if (paymentStatus.value === 'partial') {
+                    amountPaidContainer.style.display = 'block';
+                    amountPaidInput.required = true;
+                } else {
+                    amountPaidContainer.style.display = 'none';
+                    amountPaidInput.required = false;
+                }
+            }
+
+            paymentStatus.addEventListener('change', toggleAmountPaid);
+            toggleAmountPaid(); // Initial check
+        }
+    });
+</script>
