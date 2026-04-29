@@ -50,7 +50,7 @@
                     <th class="py-3">Sale No.</th>
                     <th>Product</th>
                     <th>Customer</th>
-                    <th>Type</th>
+                    <th>Sales Type</th>
                     <th>Quantity</th>
                     <th>Unit Price</th>
                     <th>Total</th>

@@ -50,7 +50,7 @@
                     <th class="py-3">Name</th>
                     <th>Contact</th>
                     <th>Address</th>
-                    <th>Type</th>
+
                     <th width="150">Actions</th>
                 </tr>
             </thead>
@@ -72,11 +72,7 @@
                         {{ $customer->customer_address }}
                     </td>
 
-                    <td>
-                        <span class="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded-full">
-                            {{ ucfirst($customer->customer_type) }}
-                        </span>
-                    </td>
+
 
                     <td class="flex gap-2 py-3">
 

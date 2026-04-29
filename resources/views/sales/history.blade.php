@@ -107,12 +107,6 @@
                     <!-- Customer -->
                     <td class="text-gray-600">
                         {{ $sale->customer->customer_name ?? 'Walk-in' }}
-                        @if($sale->customer)
-                            <br>
-                            <span class="text-xs text-gray-500">
-                                {{ ucfirst($sale->customer->customer_type ?? 'N/A') }}
-                            </span>
-                        @endif
                     </td>
 
                     <!-- Product -->
@@ -278,7 +272,6 @@ function viewReceipt(saleId, receiptNumber, btn) {
                     <div class="mb-3 pb-3 border-b">
                         <p class="text-xs text-gray-600 font-semibold mb-1">CUSTOMER</p>
                         <p class="font-semibold text-xs">${sale.customer?.customer_name || 'Walk-in Customer'}</p>
-                        ${sale.customer ? `<p class="text-xs text-gray-600">${sale.customer.customer_type.toUpperCase()}</p>` : ''}
                     </div>
 
                     <div class="mb-3 pb-3 border-b">
@@ -289,7 +282,7 @@ function viewReceipt(saleId, receiptNumber, btn) {
                                 <span class="font-semibold">${sale.product?.product_name || '-'}</span>
                             </div>
                             <div class="flex justify-between">
-                                <span>Type:</span>
+                                <span>Sales Type:</span>
                                 <span class="font-semibold">${sale.sale_type.toUpperCase()}</span>
                             </div>
                             <div class="flex justify-between">

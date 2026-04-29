@@ -19,7 +19,7 @@
             <option value="">Walk-in / None</option>
             @foreach ($customers as $customer)
                 <option value="{{ $customer->id }}" @selected(old('customer_id', $sale->customer_id ?? '') == $customer->id)>
-                    {{ $customer->customer_name }} ({{ ucfirst($customer->customer_type) }})
+                    {{ $customer->customer_name }}
                 </option>
             @endforeach
         </select>
