@@ -85,6 +85,15 @@
                 </a>
             </li>
 
+            <!-- DELIVERIES -->
+            <li>
+                <a href="{{ route('deliveries.index') }}" 
+                   class="flex items-center gap-3 px-4 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">
+                    <i class="bx bx-truck text-lg text-blue-500"></i>
+                    <span>Deliveries</span>
+                </a>
+            </li>
+
             <!-- NOTIFICATIONS -->
             <li>
                 <a href="{{ route('notifications.index') }}" 

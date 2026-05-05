@@ -40,6 +40,11 @@ class DashboardController extends Controller
 
         $logs = UserLog::query()->with('user')->latest()->take(10)->get();
 
+        $recentDeliveries = Delivery::with(['customer', 'vehicle'])
+            ->latest()
+            ->take(5)
+            ->get();
+
         return view('dashboard.index', compact(
             'inventories',
             'todayProduction',
@@ -47,7 +52,8 @@ class DashboardController extends Controller
             'pendingDeliveries',
             'todayProductionByProduct',
             'notifications',
-            'logs'
+            'logs',
+            'recentDeliveries'
         ));
     }
 }

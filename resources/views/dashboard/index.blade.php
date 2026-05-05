@@ -101,6 +101,67 @@
 </div>
 @endif
 
+<!-- DELIVERY LOGISTICS STATUS -->
+@if($recentDeliveries->count())
+<div class="mt-8">
+    <div class="flex items-center justify-between mb-4">
+        <h4 class="text-lg font-semibold text-gray-700">Delivery Logistics Status</h4>
+        <a href="{{ route('deliveries.index') }}" class="text-sm text-blue-600 hover:underline">View All Deliveries</a>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full whitespace-nowrap table-auto border-collapse">
+                <thead class="bg-gray-50 border-b border-gray-100">
+                    <tr>
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date/Time</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Customer</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Destination</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Vehicle</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    @foreach($recentDeliveries as $delivery)
+                        <tr class="hover:bg-gray-50 transition">
+                            <td class="px-5 py-3 text-sm text-gray-700">
+                                {{ $delivery->delivery_date?->format('M d, Y') }} 
+                                <span class="text-gray-400 text-xs">{{ \Carbon\Carbon::parse($delivery->delivery_time)->format('h:i A') }}</span>
+                            </td>
+                            <td class="px-5 py-3 text-sm text-gray-700 font-medium">
+                                {{ $delivery->customer->customer_name ?? 'Walk-in' }}
+                            </td>
+                            <td class="px-5 py-3 text-sm text-gray-600">
+                                <div class="flex items-center gap-2">
+                                    <i class="bx bx-map text-red-500"></i>
+                                    <span class="truncate max-w-[200px]" title="{{ $delivery->destination }}">{{ $delivery->destination }}</span>
+                                </div>
+                            </td>
+                            <td class="px-5 py-3 text-sm text-gray-600">
+                                {{ $delivery->vehicle->vehicle_name ?? 'Unassigned' }}
+                            </td>
+                            <td class="px-5 py-3 text-sm">
+                                @php
+                                    $statusColors = [
+                                        'pending' => 'bg-yellow-100 text-yellow-800',
+                                        'out_for_delivery' => 'bg-blue-100 text-blue-800',
+                                        'delivered' => 'bg-green-100 text-green-800',
+                                        'cancelled' => 'bg-red-100 text-red-800',
+                                    ];
+                                    $colorClass = $statusColors[$delivery->status] ?? 'bg-gray-100 text-gray-800';
+                                @endphp
+                                <span class="px-2.5 py-1 rounded-full text-xs font-medium {{ $colorClass }}">
+                                    {{ ucwords(str_replace('_', ' ', $delivery->status)) }}
+                                </span>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+@endif
+
 <!-- CONTENT SECTION -->
 <div class="grid grid-cols-12 gap-6 mt-8">
 
