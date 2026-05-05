@@ -121,7 +121,7 @@ class SaleController extends Controller
 
                     // Automatically create a Delivery record
                     $customer = Customer::find($data['customer_id'] ?? null);
-                    \App\Models\Delivery::create([
+                    $delivery = \App\Models\Delivery::create([
                         'sale_id'       => $sale->id,
                         'customer_id'   => $data['customer_id'],
                         'vehicle_id'    => $data['vehicle_id'],
@@ -130,6 +130,11 @@ class SaleController extends Controller
                         'delivery_time' => now()->format('H:i:s'),
                         'status'        => 'pending',
                         'assigned_by'   => Auth::id(),
+                    ]);
+
+                    $delivery->logs()->create([
+                        'status' => 'pending',
+                        'notes' => 'Delivery initiated from Sale #' . $sale->sale_number,
                     ]);
                 }
 

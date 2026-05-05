@@ -95,10 +95,18 @@
             </li>
 
             <!-- NOTIFICATIONS -->
+            @php
+                $hasUnread = \App\Models\SystemNotification::where('user_id', auth()->id())->where('is_read', false)->exists();
+            @endphp
             <li>
                 <a href="{{ route('notifications.index') }}" 
                    class="flex items-center gap-3 px-4 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">
-                    <i class="bx bx-bell text-lg text-blue-500"></i>
+                    <div class="relative">
+                        <i class="bx bx-bell text-lg text-blue-500"></i>
+                        @if($hasUnread)
+                            <span class="absolute top-0 right-0 block h-2 w-2 rounded-full bg-yellow-400 ring-2 ring-white"></span>
+                        @endif
+                    </div>
                     <span>Notifications</span>
                 </a>
             </li>
