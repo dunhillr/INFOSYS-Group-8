@@ -27,7 +27,7 @@ class SaleController extends Controller
 
     public function index(): View
     {
-        $sales = Sale::with(['product', 'customer', 'user'])->latest()->paginate(10);
+        $sales = Sale::with(['saleItems.product', 'customer', 'user'])->latest()->paginate(10);
         return view('sales.index', compact('sales'));
     }
 
@@ -45,11 +45,14 @@ class SaleController extends Controller
         try {
             DB::transaction(function () use ($request) {
                 $data = $request->validated();
-                $quantity   = (float) $data['quantity'];
-                $unitPrice  = (float) $data['unit_price'];
-                $productId  = $data['product_id'] ?? null;
+                
+                $items = $data['items'];
+                $subtotal = 0;
+                foreach ($items as $item) {
+                    $subtotal += ($item['quantity'] * $item['unit_price']);
+                }
 
-                $subtotal       = $quantity * $unitPrice;
+                $deliveryFee    = (float) ($data['delivery_fee'] ?? 0);
                 $discountType   = $data['discount_type'] ?? null;
                 $discountAmount = (float) ($data['discount_amount'] ?? 0);
 
@@ -61,7 +64,7 @@ class SaleController extends Controller
                     $discountValue = $discountAmount;
                 }
 
-                $totalAmount   = max(0, $subtotal - $discountValue);
+                $totalAmount   = max(0, $subtotal + $deliveryFee - $discountValue);
                 $paymentStatus = $data['payment_status'];
                 $amountPaid    = 0;
                 $balanceDue    = $totalAmount;
@@ -94,14 +97,12 @@ class SaleController extends Controller
 
                 $sale = Sale::create([
                     'sale_number'     => $saleNumber,
-                    'product_id'      => $productId,
                     'customer_id'     => $data['customer_id'] ?? null,
                     'vehicle_id'      => $data['vehicle_id'] ?? null,
                     'sale_date'       => now(),
                     'sale_type'       => $data['sale_type'] ?? 'retail',
                     'delivery_type'   => $data['delivery_type'],
-                    'quantity'        => $quantity,
-                    'unit_price'      => $unitPrice,
+                    'delivery_fee'    => $deliveryFee,
                     'discount_type'   => $discountType,
                     'discount_amount' => $discountAmount,
                     'total_amount'    => $totalAmount,
@@ -114,6 +115,18 @@ class SaleController extends Controller
                     'notes'           => $data['notes'] ?? null,
                     'user_id'         => Auth::id(),
                 ]);
+
+                foreach ($items as $item) {
+                    $itemSubtotal = $item['quantity'] * $item['unit_price'];
+                    $sale->saleItems()->create([
+                        'product_id' => $item['product_id'],
+                        'quantity' => $item['quantity'],
+                        'unit_price' => $item['unit_price'],
+                        'subtotal' => $itemSubtotal,
+                    ]);
+
+                    $this->inventoryService->deductStock($item['quantity'], 'sale', $sale->id, Auth::id(), 'Sale stock deduction', (int) $item['product_id']);
+                }
 
                 // Update vehicle status and auto-create Delivery only for non-walk-in types
                 if (($data['vehicle_id'] ?? null) && $data['delivery_type'] !== 'walk_in') {
@@ -133,7 +146,6 @@ class SaleController extends Controller
                     ]);
                 }
 
-                $this->inventoryService->deductStock($quantity, 'sale', $sale->id, Auth::id(), 'Sale stock deduction', $productId ? (int) $productId : null);
                 ActivityLogService::log(Auth::id(), 'create', 'sales', 'Created sale #'.$sale->id, $request);
 
                 SystemNotification::notifyUsers(
@@ -143,7 +155,7 @@ class SaleController extends Controller
                 );
             });
         } catch (RuntimeException $exception) {
-            return back()->withInput()->withErrors(['quantity' => $exception->getMessage()]);
+            return back()->withInput()->withErrors(['error' => $exception->getMessage()]);
         }
 
         return redirect()->route('sales.index')->with('success', 'Sale recorded successfully.');
@@ -151,6 +163,7 @@ class SaleController extends Controller
 
     public function edit(Sale $sale): View
     {
+        $sale->load('saleItems.product');
         $customers   = Customer::orderBy('customer_name')->get();
         $products    = Product::where('is_active', true)->orderBy('product_name')->get();
         $vehicles    = Vehicle::orderBy('vehicle_name')->get();
@@ -163,18 +176,33 @@ class SaleController extends Controller
         try {
             DB::transaction(function () use ($request, $sale) {
                 $data = $request->validated();
-                $newQuantity = (float) $data['quantity'];
-                $unitPrice = (float) $data['unit_price'];
-                $oldQuantity = (float) $sale->quantity;
-                $oldVehicleId = $sale->vehicle_id;
-                $oldProductId = $sale->product_id;
-                $newProductId = $data['product_id'] ?? null;
+                
+                // Reverse old stock for all old items
+                foreach ($sale->saleItems as $oldItem) {
+                    $this->inventoryService->addStock((float) $oldItem->quantity, 'sale_update_reversal', $sale->id, Auth::id(), 'Reversed previous sale quantity before update', (int) $oldItem->product_id);
+                }
 
-                // Reverse old stock, apply new stock
-                $this->inventoryService->addStock($oldQuantity, 'sale_update_reversal', $sale->id, Auth::id(), 'Reversed previous sale quantity before update', $oldProductId ? (int) $oldProductId : null);
-                $this->inventoryService->deductStock($newQuantity, 'sale_update', $sale->id, Auth::id(), 'Applied updated sale quantity', $newProductId ? (int) $newProductId : null);
+                $sale->saleItems()->delete();
 
-                $totalAmount = $newQuantity * $unitPrice;
+                $items = $data['items'];
+                $subtotal = 0;
+                foreach ($items as $item) {
+                    $subtotal += ($item['quantity'] * $item['unit_price']);
+                }
+
+                $deliveryFee    = (float) ($data['delivery_fee'] ?? 0);
+                $discountType   = $data['discount_type'] ?? null;
+                $discountAmount = (float) ($data['discount_amount'] ?? 0);
+
+                // Compute discount value
+                $discountValue = 0;
+                if ($discountType === 'percent') {
+                    $discountValue = $subtotal * ($discountAmount / 100);
+                } elseif ($discountType === 'fixed') {
+                    $discountValue = $discountAmount;
+                }
+
+                $totalAmount = max(0, $subtotal + $deliveryFee - $discountValue);
                 $paymentStatus = $data['payment_status'];
                 $amountPaid = 0;
                 $balanceDue = $totalAmount;
@@ -187,14 +215,17 @@ class SaleController extends Controller
                     $balanceDue = max(0, $totalAmount - $amountPaid);
                 }
 
+                $oldVehicleId = $sale->vehicle_id;
+
                 $sale->update([
-                    'product_id' => $newProductId,
                     'customer_id' => $data['customer_id'] ?? null,
                     'vehicle_id' => $data['vehicle_id'] ?? null,
-                    'sale_date' => $data['sale_date'],
-                    'sale_type' => $data['sale_type'],
-                    'quantity' => $newQuantity,
-                    'unit_price' => $unitPrice,
+                    'sale_date' => $data['sale_date'] ?? $sale->sale_date,
+                    'sale_type' => $data['sale_type'] ?? $sale->sale_type,
+                    'delivery_type' => $data['delivery_type'],
+                    'delivery_fee' => $deliveryFee,
+                    'discount_type' => $discountType,
+                    'discount_amount' => $discountAmount,
                     'total_amount' => $totalAmount,
                     'payment_status' => $paymentStatus,
                     'amount_paid' => $amountPaid,
@@ -202,6 +233,18 @@ class SaleController extends Controller
                     'payment_method' => $data['payment_method'] ?? null,
                     'notes' => $data['notes'] ?? null,
                 ]);
+
+                foreach ($items as $item) {
+                    $itemSubtotal = $item['quantity'] * $item['unit_price'];
+                    $sale->saleItems()->create([
+                        'product_id' => $item['product_id'],
+                        'quantity' => $item['quantity'],
+                        'unit_price' => $item['unit_price'],
+                        'subtotal' => $itemSubtotal,
+                    ]);
+
+                    $this->inventoryService->deductStock($item['quantity'], 'sale_update', $sale->id, Auth::id(), 'Applied updated sale quantity', (int) $item['product_id']);
+                }
 
                 // Handle vehicle status changes
                 $newVehicleId = $data['vehicle_id'] ?? null;
@@ -214,7 +257,7 @@ class SaleController extends Controller
                     }
 
                     // Update new vehicle status to "in_use" if a vehicle is now assigned
-                    if ($newVehicleId) {
+                    if ($newVehicleId && $data['delivery_type'] !== 'walk_in') {
                         Vehicle::where('id', $newVehicleId)->update(['status' => 'in_use']);
                     }
                 }
@@ -222,7 +265,7 @@ class SaleController extends Controller
                 ActivityLogService::log(Auth::id(), 'update', 'sales', 'Updated sale #'.$sale->id, $request);
             });
         } catch (RuntimeException $exception) {
-            return back()->withInput()->withErrors(['quantity' => $exception->getMessage()]);
+            return back()->withInput()->withErrors(['error' => $exception->getMessage()]);
         }
 
         return redirect()->route('sales.index')->with('success', 'Sale updated successfully.');
@@ -231,7 +274,9 @@ class SaleController extends Controller
     public function destroy(Request $request, Sale $sale): RedirectResponse
     {
         DB::transaction(function () use ($request, $sale) {
-            $this->inventoryService->addStock((float) $sale->quantity, 'sale_delete_reversal', $sale->id, Auth::id(), 'Deleted sale stock restored', $sale->product_id ? (int) $sale->product_id : null);
+            foreach ($sale->saleItems as $item) {
+                $this->inventoryService->addStock((float) $item->quantity, 'sale_delete_reversal', $sale->id, Auth::id(), 'Deleted sale stock restored', (int) $item->product_id);
+            }
             
             // Revert vehicle status back to "available" if a vehicle was assigned
             if ($sale->vehicle_id) {
@@ -248,7 +293,7 @@ class SaleController extends Controller
 
     public function history(): View
     {
-        $sales = Sale::with(['product', 'customer', 'vehicle', 'user'])
+        $sales = Sale::with(['saleItems.product', 'customer', 'vehicle', 'user'])
             ->orderByDesc('sale_date')
             ->paginate(15);
         return view('sales.history', compact('sales'));

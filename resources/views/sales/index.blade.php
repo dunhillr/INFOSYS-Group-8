@@ -48,11 +48,8 @@
             <thead>
                 <tr class="text-left border-b text-gray-600">
                     <th class="py-3">Sale No.</th>
-                    <th>Product</th>
                     <th>Customer</th>
-                    <th>Sales Type</th>
-                    <th>Quantity</th>
-                    <th>Unit Price</th>
+                    <th>Items</th>
                     <th>Total</th>
                     <th>Payment</th>
                     <th>Date</th>
@@ -69,24 +66,17 @@
                         {{ $sale->sale_number }}
                     </td>
 
-                    <td class="text-gray-800">
-                        {{ $sale->product->product_name ?? '-' }}
-                    </td>
-
                     <td class="text-gray-600">
                         {{ $sale->customer->customer_name ?? 'Walk-in' }}
                     </td>
 
-                    <td class="text-gray-600">
-                        {{ ucfirst($sale->sale_type) }}
-                    </td>
-
-                    <td class="text-gray-800">
-                        {{ number_format($sale->quantity, 2) }}
-                    </td>
-
-                    <td class="text-gray-800">
-                        {{ number_format($sale->unit_price, 2) }}
+                    <td class="text-gray-800 text-xs">
+                        @foreach($sale->saleItems as $item)
+                            <div class="mb-1">
+                                <span class="font-semibold">{{ $item->product->product_name ?? 'Unknown' }}</span>
+                                <span class="text-gray-500">(x{{ number_format($item->quantity, 2) }})</span>
+                            </div>
+                        @endforeach
                     </td>
 
                     <td class="text-blue-600 font-semibold">

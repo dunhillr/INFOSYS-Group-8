@@ -1,25 +1,7 @@
 <div class="grid grid-cols-12 gap-4">
-    <!-- Product Selection -->
-    <div class="xl:col-span-6 col-span-12">
-        <label class="form-label">Product</label>
-        <select name="product_id" id="product_select" class="form-control">
-            <option value="" data-price="" data-stock="">Select product</option>
-            @foreach ($products as $product)
-                @php
-                    $stock = isset($inventories) && isset($inventories[$product->id]) ? $inventories[$product->id]->current_stock : 0;
-                @endphp
-                <option value="{{ $product->id }}" data-price="{{ $product->default_price ?? '' }}" data-stock="{{ $stock }}" @selected(old('product_id', $sale->product_id ?? '') == $product->id)>
-                    {{ $product->product_name }}
-                </option>
-            @endforeach
-        </select>
-        <p class="text-xs mt-1 font-medium text-gray-500" id="stock_indicator" style="display: none;">
-            Available Stock: <span id="stock_amount" class="font-bold text-blue-600"></span> bags
-        </p>
-    </div>
 
     <!-- Customer Selection -->
-    <div class="xl:col-span-6 col-span-12">
+    <div class="xl:col-span-12 col-span-12">
         <label class="form-label">Customer</label>
         <select name="customer_id" class="form-control">
             <option value="">Walk-in / None</option>
@@ -49,6 +31,11 @@
             @foreach ($vehicles as $vehicle)
                 @php
                     $isUnavailable = in_array($vehicle->status, ['in use', 'not available', 'maintenance']);
+                    // If editing, the currently assigned vehicle should not be disabled even if marked 'in use'
+                    $isCurrentVehicle = isset($sale) && $sale->vehicle_id == $vehicle->id;
+                    if ($isCurrentVehicle) {
+                        $isUnavailable = false;
+                    }
                     $statusIcon = match($vehicle->status) {
                         'available'     => '✓',
                         'in use'        => '🔴',
@@ -77,22 +64,45 @@
         </p>
     </div>
 
-
-    <!-- Quantity -->
-    <div class="xl:col-span-6 col-span-12">
-        <label class="form-label">Quantity</label>
-        <input type="number" step="0.01" min="0.01" id="quantity_input" name="quantity" class="form-control" value="{{ old('quantity', $sale->quantity ?? '') }}" required>
+    <!-- Items Table -->
+    <div class="col-span-12 mb-2 mt-4">
+        <label class="form-label font-bold text-lg">Order Items</label>
+        <div class="border rounded-lg overflow-visible">
+            <table class="w-full text-sm text-left">
+                <thead class="bg-gray-50 text-gray-700">
+                    <tr>
+                        <th class="px-4 py-2">Product</th>
+                        <th class="px-4 py-2 w-32">Quantity</th>
+                        <th class="px-4 py-2 w-32">Unit Price</th>
+                        <th class="px-4 py-2 w-32">Subtotal</th>
+                        <th class="px-4 py-2 w-16 text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="items_table_body">
+                    <!-- Rows will be added dynamically -->
+                </tbody>
+            </table>
+            <div class="p-3 bg-gray-50 border-t flex justify-between items-center">
+                <button type="button" id="add_item_btn" class="bg-blue-100 hover:bg-blue-200 text-blue-800 font-semibold py-1 px-3 rounded shadow-sm text-sm transition">
+                    + Add Product
+                </button>
+                <div class="text-right">
+                    <span class="text-gray-600 font-semibold">Items Subtotal: </span>
+                    <span class="text-lg font-bold text-gray-800" id="items_subtotal_display">₱0.00</span>
+                </div>
+            </div>
+        </div>
+        @error('items') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
     </div>
 
-    <!-- Product Price (auto-filled from selected product) -->
-    <div class="xl:col-span-6 col-span-12">
-        <label class="form-label">Product Price</label>
-        <input type="number" step="0.01" min="0" id="unit_price_input" name="unit_price" class="form-control" value="{{ old('unit_price', $sale->unit_price ?? '') }}" required placeholder="0.00">
-        <p class="text-xs text-gray-400 mt-1">Auto-filled when a product is selected. You may override.</p>
+    <!-- Delivery Fee -->
+    <div class="xl:col-span-4 col-span-12">
+        <label class="form-label">Delivery Fee <span class="text-gray-400 text-xs font-normal">(Optional)</span></label>
+        <input type="number" step="0.01" min="0" id="delivery_fee_input" name="delivery_fee" class="form-control calc-trigger" value="{{ old('delivery_fee', $sale->delivery_fee ?? '') }}" placeholder="0.00">
     </div>
 
     <!-- Discount Type -->
-    <div class="xl:col-span-6 col-span-12">
+    <div class="xl:col-span-4 col-span-12">
         <label class="form-label">Discount Type <span class="text-gray-400 text-xs font-normal">(Optional)</span></label>
         <select name="discount_type" id="discount_type" class="form-control">
             <option value="">-- No Discount --</option>
@@ -102,24 +112,39 @@
     </div>
 
     <!-- Discount Amount -->
-    <div class="xl:col-span-6 col-span-12" id="discount_amount_container" style="display: {{ old('discount_type', $sale->discount_type ?? '') ? 'block' : 'none' }};">
+    <div class="xl:col-span-4 col-span-12" id="discount_amount_container" style="display: {{ old('discount_type', $sale->discount_type ?? '') ? 'block' : 'none' }};">
         <label class="form-label" id="discount_amount_label">Discount Amount</label>
-        <input type="number" step="0.01" min="0" name="discount_amount" id="discount_amount_input" class="form-control" value="{{ old('discount_amount', $sale->discount_amount ?? '') }}" placeholder="0">
+        <input type="number" step="0.01" min="0" name="discount_amount" id="discount_amount_input" class="form-control calc-trigger" value="{{ old('discount_amount', $sale->discount_amount ?? '') }}" placeholder="0">
         <p class="text-xs text-gray-400 mt-1" id="discount_hint"></p>
     </div>
 
     <!-- Total Amount (Auto-computed, Read Only) -->
-    <div class="xl:col-span-12 col-span-12">
-        <label class="form-label">Total Amount <span class="text-xs text-gray-400 font-normal">(Auto-computed)</span></label>
-        <input
-            type="text"
-            id="total_amount_display"
-            class="form-control bg-gray-50 font-bold text-gray-800 cursor-not-allowed"
-            value="{{ old('quantity') && old('unit_price') ? number_format(old('quantity') * old('unit_price'), 2) : (isset($sale) && $sale->total_amount ? number_format($sale->total_amount, 2) : '0.00') }}"
-            readonly
-            placeholder="0.00"
-        >
-        <p class="text-xs text-gray-400 mt-1">Total Amount = (Quantity × Product Price) − Discount</p>
+    <div class="xl:col-span-12 col-span-12 mt-2">
+        <div class="bg-blue-50 p-4 rounded-lg border border-blue-100 flex justify-between items-center">
+            <div>
+                <h4 class="text-blue-800 font-bold text-lg mb-0">Total Amount</h4>
+                <p class="text-xs text-blue-600 mt-0">Subtotal + Delivery Fee − Discount</p>
+            </div>
+            <div>
+                <input
+                    type="text"
+                    id="total_amount_display"
+                    class="form-control bg-transparent border-0 font-bold text-blue-800 text-2xl text-right p-0 focus:ring-0 w-48"
+                    value="0.00"
+                    readonly
+                >
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Status -->
+    <div class="xl:col-span-6 col-span-12">
+        <label class="form-label">Payment Status</label>
+        <select name="payment_status" id="payment_status" class="form-control" required>
+            <option value="paid" @selected(old('payment_status', $sale->payment_status ?? 'paid') === 'paid')>Paid</option>
+            <option value="partial" @selected(old('payment_status', $sale->payment_status ?? '') === 'partial')>Partial</option>
+            <option value="unpaid" @selected(old('payment_status', $sale->payment_status ?? '') === 'unpaid')>Unpaid</option>
+        </select>
     </div>
 
     <!-- Payment Method -->
@@ -134,50 +159,74 @@
         </select>
     </div>
 
-    <!-- Payment Status -->
-    <div class="xl:col-span-6 col-span-12">
-        <label class="form-label">Payment Status</label>
-        <select name="payment_status" id="payment_status" class="form-control" required>
-            <option value="paid" @selected(old('payment_status', $sale->payment_status ?? 'paid') === 'paid')>Paid</option>
-            <option value="partial" @selected(old('payment_status', $sale->payment_status ?? '') === 'partial')>Partial</option>
-            <option value="unpaid" @selected(old('payment_status', $sale->payment_status ?? '') === 'unpaid')>Unpaid</option>
-        </select>
-    </div>
-
     <!-- Amount Paid (Visible only when Partial) -->
-    <div class="xl:col-span-6 col-span-12" id="amount_paid_container" style="display: {{ old('payment_status', $sale->payment_status ?? '') === 'partial' ? 'block' : 'none' }};">
+    <div class="xl:col-span-4 col-span-12" id="amount_paid_container" style="display: {{ old('payment_status', $sale->payment_status ?? '') === 'partial' ? 'block' : 'none' }};">
         <label class="form-label">Amount Paid</label>
-        <input type="number" step="0.01" min="0" name="amount_paid" id="amount_paid" class="form-control" value="{{ old('amount_paid', $sale->amount_paid ?? '') }}">
+        <input type="number" step="0.01" min="0" name="amount_paid" id="amount_paid" class="form-control calc-trigger" value="{{ old('amount_paid', $sale->amount_paid ?? '') }}">
     </div>
 
     <!-- Amount Tendered (Cash transactions) -->
-    <div class="xl:col-span-6 col-span-12" id="amount_tendered_container" style="display: {{ old('payment_method', $sale->payment_method ?? '') === 'Cash' ? 'block' : 'none' }};">
+    <div class="xl:col-span-4 col-span-12" id="amount_tendered_container" style="display: {{ old('payment_method', $sale->payment_method ?? '') === 'Cash' ? 'block' : 'none' }};">
         <label class="form-label">Amount Tendered</label>
         <div class="relative">
-            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500 font-semibold">₱</span>
-            <input type="number" step="0.01" min="0" name="amount_tendered" id="amount_tendered" class="form-control pl-8" value="{{ old('amount_tendered', $sale->amount_tendered ?? '') }}" placeholder="0.00">
+            <input type="number" step="0.01" min="0" name="amount_tendered" id="amount_tendered" class="form-control calc-trigger" value="{{ old('amount_tendered', $sale->amount_tendered ?? '') }}" placeholder="0.00">
         </div>
     </div>
 
     <!-- Change Amount -->
-    <div class="xl:col-span-6 col-span-12" id="change_amount_container" style="display: {{ old('payment_method', $sale->payment_method ?? '') === 'Cash' ? 'block' : 'none' }};">
+    <div class="xl:col-span-4 col-span-12" id="change_amount_container" style="display: {{ old('payment_method', $sale->payment_method ?? '') === 'Cash' ? 'block' : 'none' }};">
         <label class="form-label">Change</label>
         <div class="relative">
-            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-green-500 font-semibold">₱</span>
-            <input type="text" id="change_amount_display" class="form-control pl-8 bg-gray-50 font-bold text-green-600 cursor-not-allowed" value="{{ isset($sale) && $sale->change_amount ? number_format($sale->change_amount, 2) : '0.00' }}" readonly placeholder="0.00">
+            <input type="text" id="change_amount_display" class="form-control bg-gray-50 font-bold text-green-600 cursor-not-allowed" value="{{ isset($sale) && $sale->change_amount ? number_format($sale->change_amount, 2) : '0.00' }}" readonly placeholder="0.00">
         </div>
     </div>
 
     <!-- Notes -->
-    <div class="xl:col-span-12 col-span-12">
+    <div class="xl:col-span-12 col-span-12 mt-4">
         <label class="form-label">Notes</label>
-        <textarea name="notes" class="form-control" rows="4">{{ old('notes', $sale->notes ?? '') }}</textarea>
+        <textarea name="notes" class="form-control" rows="3">{{ old('notes', $sale->notes ?? '') }}</textarea>
     </div>
 </div>
 
+<!-- Products Data for JS -->
+<script>
+    const productsData = [
+        @foreach($products as $product)
+        {
+            id: {{ $product->id }},
+            name: "{{ addslashes($product->product_name) }}",
+            price: {{ $product->default_price ?? 0 }},
+            stock: {{ isset($inventories) && isset($inventories[$product->id]) ? $inventories[$product->id]->current_stock : 0 }}
+        },
+        @endforeach
+    ];
+
+    // Initial Items from Old Input or Existing Sale
+    let initialItems = [
+        @if(old('items'))
+            @foreach(old('items') as $item)
+            {
+                product_id: "{{ $item['product_id'] ?? '' }}",
+                quantity: "{{ $item['quantity'] ?? '' }}",
+                unit_price: "{{ $item['unit_price'] ?? '' }}"
+            },
+            @endforeach
+        @elseif(isset($sale) && $sale->saleItems->count() > 0)
+            @foreach($sale->saleItems as $item)
+            {
+                product_id: "{{ $item->product_id }}",
+                quantity: "{{ $item->quantity }}",
+                unit_price: "{{ $item->unit_price }}"
+            },
+            @endforeach
+        @endif
+    ];
+</script>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // --- Delivery Type: disable vehicle field on Walk-in ---
+        
+        // --- Delivery Type Logic ---
         const deliveryTypeSelect = document.getElementById('delivery_type');
         const vehicleSelect      = document.getElementById('vehicle_select');
         const vehicleField       = document.getElementById('vehicle_field');
@@ -191,100 +240,134 @@
                 vehicleSelect.value = '';
             }
         }
-
         if (deliveryTypeSelect) {
             deliveryTypeSelect.addEventListener('change', toggleVehicleField);
-            toggleVehicleField(); // Run on load
+            toggleVehicleField(); 
         }
 
-        // --- Auto-fill Product Price and Show Stock when product is selected ---
-        const productSelect   = document.getElementById('product_select');
-        const unitPriceInput  = document.getElementById('unit_price_input');
-        const stockIndicator  = document.getElementById('stock_indicator');
-        const stockAmount     = document.getElementById('stock_amount');
+        // --- Items Table Logic ---
+        const tbody = document.getElementById('items_table_body');
+        const addBtn = document.getElementById('add_item_btn');
+        let rowCount = 0;
 
-        if (productSelect) {
+        function createRow(data = {}) {
+            const tr = document.createElement('tr');
+            tr.className = 'border-b hover:bg-gray-50';
+            const index = rowCount++;
+            
+            // Product Options
+            let options = '<option value="">Select product...</option>';
+            productsData.forEach(p => {
+                const selected = p.id == data.product_id ? 'selected' : '';
+                options += `<option value="${p.id}" data-price="${p.price}" data-stock="${p.stock}" ${selected}>${p.name}</option>`;
+            });
+
+            tr.innerHTML = `
+                <td class="px-4 py-2">
+                    <select name="items[${index}][product_id]" class="form-control item-product" required>
+                        ${options}
+                    </select>
+                    <p class="text-[10px] text-gray-500 mt-1 stock-info"></p>
+                </td>
+                <td class="px-4 py-2">
+                    <input type="number" step="0.01" min="0.01" name="items[${index}][quantity]" class="form-control item-qty calc-trigger" value="${data.quantity || ''}" required placeholder="0">
+                </td>
+                <td class="px-4 py-2">
+                    <input type="number" step="0.01" min="0" name="items[${index}][unit_price]" class="form-control item-price calc-trigger" value="${data.unit_price || ''}" required placeholder="0.00">
+                </td>
+                <td class="px-4 py-2 font-semibold text-gray-800 item-subtotal-display">
+                    ₱0.00
+                </td>
+                <td class="px-4 py-2 text-center">
+                    <button type="button" class="text-red-500 hover:text-red-700 remove-item-btn" title="Remove">
+                        ✖
+                    </button>
+                </td>
+            `;
+            
+            tbody.appendChild(tr);
+
+            // Bind events for new row
+            const productSelect = tr.querySelector('.item-product');
+            const priceInput = tr.querySelector('.item-price');
+            const qtyInput = tr.querySelector('.item-qty');
+            const removeBtn = tr.querySelector('.remove-item-btn');
+            const stockInfo = tr.querySelector('.stock-info');
+
             function updateProductDetails() {
-                const selectedOption = productSelect.options[productSelect.selectedIndex];
-                
-                // Update Price
-                if (unitPriceInput) {
-                    const price = selectedOption.getAttribute('data-price');
-                    // Only auto-fill if it's an actual change by user or if the input is currently empty
-                    // Since computeTotal uses value, setting value here forces the old price.
-                    // We check if price exists and is not empty.
-                    if (price && price !== '' && !productSelect.dataset.initialized) {
-                         // Only set price on change, not on initial load if unit price already has a value (e.g. edit mode)
+                const option = productSelect.options[productSelect.selectedIndex];
+                if (option.value) {
+                    const price = option.getAttribute('data-price');
+                    const stock = option.getAttribute('data-stock');
+                    
+                    // Only auto-fill if not prepopulated (like from old input) or if user manually changed
+                    if (!data.unit_price || productSelect.dataset.changed) {
+                        priceInput.value = parseFloat(price).toFixed(2);
                     }
-                    if (price && price !== '') {
-                         // Only override if the user triggered the change event manually, not on initial DOMContentLoaded
-                         // Actually, we do want to set it if they pick a new product.
-                         // But we don't want to overwrite an old input or an existing sale's price on page load.
+                    
+                    stockInfo.textContent = `Stock: ${parseFloat(stock).toLocaleString('en-US')}`;
+                    if (parseFloat(stock) <= 0) {
+                        stockInfo.classList.add('text-red-500');
+                    } else {
+                        stockInfo.classList.remove('text-red-500');
                     }
+                } else {
+                    stockInfo.textContent = '';
                 }
+                calculateTotals();
             }
 
             productSelect.addEventListener('change', function() {
-                const selectedOption = this.options[this.selectedIndex];
-                
-                // Update Price
-                if (unitPriceInput) {
-                    const price = selectedOption.getAttribute('data-price');
-                    if (price && price !== '') {
-                        unitPriceInput.value = parseFloat(price).toFixed(2);
-                        computeTotal();
-                    }
+                productSelect.dataset.changed = 'true';
+                updateProductDetails();
+            });
+            
+            qtyInput.addEventListener('input', calculateTotals);
+            priceInput.addEventListener('input', calculateTotals);
+            
+            removeBtn.addEventListener('click', function() {
+                if (tbody.children.length > 1) {
+                    tr.remove();
+                    calculateTotals();
+                } else {
+                    alert('You must have at least one item in the sale.');
                 }
-                
-                // Update Stock Display
-                updateStockDisplay(selectedOption);
             });
 
-            function updateStockDisplay(selectedOption) {
-                 if (stockIndicator && stockAmount) {
-                    const stock = selectedOption.getAttribute('data-stock');
-                    if (stock && stock !== '') {
-                        stockAmount.textContent = parseFloat(stock).toLocaleString('en-US', { maximumFractionDigits: 2 });
-                        stockIndicator.style.display = 'block';
-                    } else {
-                        stockIndicator.style.display = 'none';
-                    }
-                }
+            // Initial call if data exists
+            if (data.product_id) {
+                updateProductDetails();
             }
-
-            // Run stock display on load
-            updateStockDisplay(productSelect.options[productSelect.selectedIndex]);
         }
 
-        // --- Auto-compute Total Amount (with discount) ---
-        const quantityInput        = document.getElementById('quantity_input');
-        const totalDisplay         = document.getElementById('total_amount_display');
-        const discountTypeSelect   = document.getElementById('discount_type');
-        const discountAmountInput  = document.getElementById('discount_amount_input');
-        const discountContainer    = document.getElementById('discount_amount_container');
-        const discountHint         = document.getElementById('discount_hint');
-        const discountLabel        = document.getElementById('discount_amount_label');
-
-        function computeTotal() {
-            const qty      = parseFloat(quantityInput.value)  || 0;
-            const price    = parseFloat(unitPriceInput.value) || 0;
-            const subtotal = qty * price;
-
-            const discountType = discountTypeSelect ? discountTypeSelect.value : '';
-            const discountVal  = parseFloat(discountAmountInput ? discountAmountInput.value : 0) || 0;
-
-            let discountValue = 0;
-            if (discountType === 'percent') {
-                discountValue = subtotal * (discountVal / 100);
-            } else if (discountType === 'fixed') {
-                discountValue = discountVal;
-            }
-
-            const total = Math.max(0, subtotal - discountValue);
-            totalDisplay.value = total.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (initialItems.length > 0) {
+            initialItems.forEach(item => createRow(item));
+        } else {
+            createRow(); // Create at least one empty row
         }
 
-        // Toggle discount amount field visibility
+        addBtn.addEventListener('click', () => createRow());
+
+        // --- Calculation Logic ---
+        const deliveryFeeInput = document.getElementById('delivery_fee_input');
+        const discountTypeSelect = document.getElementById('discount_type');
+        const discountAmountInput = document.getElementById('discount_amount_input');
+        const discountContainer = document.getElementById('discount_amount_container');
+        const discountHint = document.getElementById('discount_hint');
+        const discountLabel = document.getElementById('discount_amount_label');
+        const totalDisplay = document.getElementById('total_amount_display');
+        const itemsSubtotalDisplay = document.getElementById('items_subtotal_display');
+        
+        const paymentStatus = document.getElementById('payment_status');
+        const amountPaidContainer = document.getElementById('amount_paid_container');
+        const amountPaidInput = document.getElementById('amount_paid');
+        const paymentMethodSelect = document.getElementById('payment_method');
+        const amountTenderedContainer = document.getElementById('amount_tendered_container');
+        const changeAmountContainer = document.getElementById('change_amount_container');
+        const amountTenderedInput = document.getElementById('amount_tendered');
+        const changeAmountDisplay = document.getElementById('change_amount_display');
+
+        // Discount Type Toggle
         if (discountTypeSelect) {
             discountTypeSelect.addEventListener('change', function() {
                 if (this.value) {
@@ -300,85 +383,33 @@
                     discountContainer.style.display = 'none';
                     if (discountAmountInput) discountAmountInput.value = '';
                 }
-                computeTotal();
+                calculateTotals();
             });
-            // Set label on load (for edit page)
-            const initialType = discountTypeSelect.value;
-            if (initialType === 'percent') { discountLabel.textContent = 'Discount (%)'; discountHint.textContent = 'Enter a value between 0 and 100'; }
-            else if (initialType === 'fixed') { discountLabel.textContent = 'Discount Amount (₱)'; discountHint.textContent = 'Enter fixed discount in pesos'; }
+            // Initial toggle
+            if (discountTypeSelect.value) {
+                discountTypeSelect.dispatchEvent(new Event('change'));
+            }
         }
 
-        if (discountAmountInput) {
-            discountAmountInput.addEventListener('input', computeTotal);
-        }
-
-        if (quantityInput && unitPriceInput && totalDisplay) {
-            quantityInput.addEventListener('input', computeTotal);
-            unitPriceInput.addEventListener('input', computeTotal);
-            computeTotal(); // Run once on load
-        }
-
-        // --- Toggle Amount Paid field ---
-        const paymentStatus      = document.getElementById('payment_status');
-        const amountPaidContainer = document.getElementById('amount_paid_container');
-        const amountPaidInput    = document.getElementById('amount_paid');
-
-        if (paymentStatus && amountPaidContainer && amountPaidInput) {
-            function toggleAmountPaid() {
-                if (paymentStatus.value === 'partial') {
+        // Payment Status Toggle
+        if (paymentStatus) {
+            paymentStatus.addEventListener('change', function() {
+                if (this.value === 'partial') {
                     amountPaidContainer.style.display = 'block';
                     amountPaidInput.required = true;
                 } else {
                     amountPaidContainer.style.display = 'none';
                     amountPaidInput.required = false;
                 }
-                computeChange();
-            }
-            paymentStatus.addEventListener('change', toggleAmountPaid);
-            toggleAmountPaid();
+                calculateTotals();
+            });
+            paymentStatus.dispatchEvent(new Event('change'));
         }
 
-        // --- Amount Tendered and Change Logic ---
-        const paymentMethodSelect = document.getElementById('payment_method');
-        const amountTenderedContainer = document.getElementById('amount_tendered_container');
-        const changeAmountContainer = document.getElementById('change_amount_container');
-        const amountTenderedInput = document.getElementById('amount_tendered');
-        const changeAmountDisplay = document.getElementById('change_amount_display');
-
-        function computeChange() {
-            if (!amountTenderedInput || !changeAmountDisplay || !paymentStatus || !totalDisplay) return;
-
-            const tendered = parseFloat(amountTenderedInput.value) || 0;
-            // Get raw total directly (not from formatted totalDisplay.value)
-            const qty      = parseFloat(quantityInput.value)  || 0;
-            const price    = parseFloat(unitPriceInput.value) || 0;
-            const subtotal = qty * price;
-
-            const discountTypeSelect = document.getElementById('discount_type');
-            const discountAmountInput = document.getElementById('discount_amount_input');
-            const discountType = discountTypeSelect ? discountTypeSelect.value : '';
-            const discountVal  = parseFloat(discountAmountInput ? discountAmountInput.value : 0) || 0;
-
-            let discountValue = 0;
-            if (discountType === 'percent') {
-                discountValue = subtotal * (discountVal / 100);
-            } else if (discountType === 'fixed') {
-                discountValue = discountVal;
-            }
-            const total = Math.max(0, subtotal - discountValue);
-            
-            let amountToPay = total;
-            if (paymentStatus.value === 'partial') {
-                amountToPay = parseFloat(amountPaidInput ? amountPaidInput.value : 0) || 0;
-            }
-
-            const change = Math.max(0, tendered - amountToPay);
-            changeAmountDisplay.value = change.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        }
-
-        if (paymentMethodSelect && amountTenderedContainer && changeAmountContainer) {
-            function toggleTenderedFields() {
-                if (paymentMethodSelect.value === 'Cash') {
+        // Payment Method Toggle
+        if (paymentMethodSelect) {
+            paymentMethodSelect.addEventListener('change', function() {
+                if (this.value === 'Cash') {
                     amountTenderedContainer.style.display = 'block';
                     changeAmountContainer.style.display = 'block';
                     amountTenderedInput.required = true;
@@ -389,25 +420,61 @@
                     amountTenderedInput.value = '';
                     changeAmountDisplay.value = '0.00';
                 }
-                computeChange();
+                calculateTotals();
+            });
+            paymentMethodSelect.dispatchEvent(new Event('change'));
+        }
+
+        function calculateTotals() {
+            let subtotal = 0;
+            
+            // Calculate item subtotals
+            const rows = tbody.querySelectorAll('tr');
+            rows.forEach(row => {
+                const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                const price = parseFloat(row.querySelector('.item-price').value) || 0;
+                const rowSub = qty * price;
+                subtotal += rowSub;
+                
+                row.querySelector('.item-subtotal-display').textContent = `₱${rowSub.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            });
+
+            itemsSubtotalDisplay.textContent = `₱${subtotal.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+            // Add Delivery Fee
+            const deliveryFee = parseFloat(deliveryFeeInput.value) || 0;
+            
+            // Subtract Discount
+            const discountType = discountTypeSelect ? discountTypeSelect.value : '';
+            const discountVal = parseFloat(discountAmountInput ? discountAmountInput.value : 0) || 0;
+            
+            let discountValue = 0;
+            if (discountType === 'percent') {
+                discountValue = subtotal * (discountVal / 100);
+            } else if (discountType === 'fixed') {
+                discountValue = discountVal;
             }
-            paymentMethodSelect.addEventListener('change', toggleTenderedFields);
-            toggleTenderedFields();
+
+            const total = Math.max(0, subtotal + deliveryFee - discountValue);
+            totalDisplay.value = `₱ ${total.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            // Calculate Change
+            const tendered = parseFloat(amountTenderedInput.value) || 0;
+            let amountToPay = total;
+            if (paymentStatus.value === 'partial') {
+                amountToPay = parseFloat(amountPaidInput.value) || 0;
+            }
+
+            const change = Math.max(0, tendered - amountToPay);
+            changeAmountDisplay.value = change.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
-        if (amountTenderedInput) {
-            amountTenderedInput.addEventListener('input', computeChange);
-        }
-        if (amountPaidInput) {
-            amountPaidInput.addEventListener('input', computeChange);
-        }
-        
-        // Ensure computeTotal also updates change
-        const originalComputeTotal = computeTotal;
-        computeTotal = function() {
-            originalComputeTotal();
-            computeChange();
-        };
+        // Bind global calc triggers
+        document.querySelectorAll('.calc-trigger').forEach(el => {
+            el.addEventListener('input', calculateTotals);
+        });
 
+        // Initial calculation
+        calculateTotals();
     });
 </script>

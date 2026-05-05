@@ -69,14 +69,11 @@
         <table class="min-w-full whitespace-nowrap text-sm">
 
             <thead>
-                <tr class="text-left border-b text-gray-600 font-semibold">
                     <th class="py-3">Date</th>
                     <th>Receipt ID</th>
                     <th>Customer</th>
-                    <th>Product</th>
+                    <th>Items</th>
                     <th>Assigned Vehicle</th>
-                    <th>Quantity</th>
-                    <th>Unit Price</th>
                     <th>Total Amount</th>
                     <th>Payment Status</th>
                     <th width="120">Actions</th>
@@ -109,9 +106,14 @@
                         {{ $sale->customer->customer_name ?? 'Walk-in' }}
                     </td>
 
-                    <!-- Product -->
-                    <td class="text-gray-600">
-                        {{ $sale->product->product_name ?? '-' }}
+                    <!-- Items -->
+                    <td class="text-gray-800 text-xs">
+                        @foreach($sale->saleItems as $item)
+                            <div class="mb-1">
+                                <span class="font-semibold">{{ $item->product->product_name ?? 'Unknown' }}</span>
+                                <span class="text-gray-500">(x{{ number_format($item->quantity, 2) }})</span>
+                            </div>
+                        @endforeach
                     </td>
 
                     <!-- Assigned Vehicle -->
@@ -127,16 +129,6 @@
                         @else
                             <span class="text-gray-400 italic">-</span>
                         @endif
-                    </td>
-
-                    <!-- Quantity -->
-                    <td class="text-gray-800">
-                        {{ number_format($sale->quantity, 2) }}
-                    </td>
-
-                    <!-- Unit Price -->
-                    <td class="text-gray-800">
-                        ₱{{ number_format($sale->unit_price, 2) }}
                     </td>
 
                     <!-- Total Amount -->
@@ -277,22 +269,36 @@ function viewReceipt(saleId, receiptNumber, btn) {
                     <div class="mb-3 pb-3 border-b">
                         <p class="text-xs text-gray-600 font-semibold mb-1">SALE DETAILS</p>
                         <div class="space-y-1 text-xs">
-                            <div class="flex justify-between">
-                                <span>Product:</span>
-                                <span class="font-semibold">${sale.product?.product_name || '-'}</span>
+                            <div class="mb-2">
+                                <span class="font-semibold text-gray-600">ITEMS:</span>
+                            </div>
+                            <div class="border rounded p-2 mb-2 bg-gray-50">
+                                ${sale.sale_items.map(item => `
+                                    <div class="flex justify-between mb-1">
+                                        <span>${item.product?.product_name || '-'} (x${parseFloat(item.quantity).toFixed(2)})</span>
+                                        <span class="font-semibold">₱${parseFloat(item.subtotal).toFixed(2)}</span>
+                                    </div>
+                                    <div class="flex justify-between text-gray-500 text-[10px] mb-2 border-b border-gray-200 pb-1 last:border-0 last:pb-0 last:mb-0">
+                                        <span>@ ₱${parseFloat(item.unit_price).toFixed(2)}/unit</span>
+                                    </div>
+                                `).join('')}
                             </div>
                             <div class="flex justify-between">
                                 <span>Sales Type:</span>
                                 <span class="font-semibold">${sale.sale_type.toUpperCase()}</span>
                             </div>
+                            ${sale.delivery_fee > 0 ? `
                             <div class="flex justify-between">
-                                <span>Quantity:</span>
-                                <span class="font-semibold">${parseFloat(sale.quantity).toFixed(2)}</span>
+                                <span>Delivery Fee:</span>
+                                <span class="font-semibold">₱${parseFloat(sale.delivery_fee).toFixed(2)}</span>
                             </div>
-                            <div class="flex justify-between">
-                                <span>Unit Price:</span>
-                                <span class="font-semibold">₱${parseFloat(sale.unit_price).toFixed(2)}</span>
+                            ` : ''}
+                            ${sale.discount_amount > 0 ? `
+                            <div class="flex justify-between text-red-500">
+                                <span>Discount (${sale.discount_type}):</span>
+                                <span class="font-semibold">-₱${parseFloat(sale.discount_type === 'percent' ? (sale.total_amount + parseFloat(sale.discount_amount)) * (parseFloat(sale.discount_amount)/100) : sale.discount_amount).toFixed(2)}</span>
                             </div>
+                            ` : ''}
                             ${sale.vehicle ? `
                             <div class="flex justify-between">
                                 <span>Vehicle:</span>
