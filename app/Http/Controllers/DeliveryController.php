@@ -61,6 +61,11 @@ class DeliveryController extends Controller
 
     public function edit(Delivery $delivery): View
     {
+        if (!$delivery->is_opened) {
+            $delivery->update(['is_opened' => true]);
+        }
+        
+        $delivery->load('logs');
         $sales = Sale::with('customer')->where('sale_type', 'wholesale')->latest()->get();
         $customers = Customer::orderBy('customer_name')->get();
         $vehicles = Vehicle::orderBy('vehicle_name')->get();
@@ -72,24 +77,19 @@ class DeliveryController extends Controller
         $data = $request->validated();
         $oldStatus = $delivery->status;
 
-        if (! empty($data['vehicle_id'])) {
-            $conflict = Delivery::query()
-                ->where('vehicle_id', $data['vehicle_id'])
-                ->where('delivery_date', $data['delivery_date'])
-                ->where('delivery_time', $data['delivery_time'])
-                ->where('status', '!=', 'cancelled')
-                ->where('id', '!=', $delivery->id)
-                ->exists();
-
-            if ($conflict) {
-                return back()->withInput()->withErrors(['vehicle_id' => 'Selected vehicle already has a delivery at the same date and time.']);
-            }
-        }
-
         $delivery->update([
-            ...$data,
-            'delivered_by' => $data['status'] === 'delivered' ? Auth::id() : null,
+            'status' => $data['status'],
+            'notes' => $data['notes'],
+            'delivered_by' => $data['status'] === 'delivered' ? Auth::id() : $delivery->delivered_by,
         ]);
+
+        // Create log if status changed or notes provided
+        if ($oldStatus !== $data['status'] || !empty($data['notes'])) {
+            $delivery->logs()->create([
+                'status' => $data['status'],
+                'notes' => $data['notes'],
+            ]);
+        }
 
         ActivityLogService::log(Auth::id(), 'update', 'deliveries', 'Updated delivery #'.$delivery->id, $request);
 
