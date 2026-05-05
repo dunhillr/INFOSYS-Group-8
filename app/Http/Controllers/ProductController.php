@@ -21,7 +21,8 @@ class ProductController extends Controller
 
     public function create(): View
     {
-        return view('products.create');
+        $allProducts = Product::where('is_active', true)->orderBy('product_name')->get();
+        return view('products.create', compact('allProducts'));
     }
 
     public function store(StoreProductRequest $request): RedirectResponse
@@ -35,7 +36,11 @@ class ProductController extends Controller
 
     public function edit(Product $product): View
     {
-        return view('products.edit', compact('product'));
+        $allProducts = Product::where('is_active', true)
+            ->where('id', '!=', $product->id)
+            ->orderBy('product_name')
+            ->get();
+        return view('products.edit', compact('product', 'allProducts'));
     }
 
     public function update(UpdateProductRequest $request, Product $product): RedirectResponse

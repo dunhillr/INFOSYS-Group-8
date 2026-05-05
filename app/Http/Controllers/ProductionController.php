@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Models\Production;
 use App\Services\ActivityLogService;
 use App\Services\InventoryService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -24,7 +25,7 @@ class ProductionController extends Controller
 
     public function index(): View
     {
-        $productions = Production::with(['user', 'product'])->latest()->paginate(10);
+        $productions = Production::with(['user', 'product', 'parentProduct'])->latest()->paginate(10);
 
         // Get available stock per product for display
         $inventories = Inventory::with('product')
@@ -37,18 +38,34 @@ class ProductionController extends Controller
 
     public function create(): View
     {
-        $products = Product::where('is_active', true)->orderBy('product_name')->get();
+        $products = Product::where('is_active', true)->with('parentProduct')->orderBy('product_name')->get();
         return view('productions.create', compact('products'));
+    }
+
+    /**
+     * Returns the parent product info for a given product (used by the form via AJAX).
+     */
+    public function getProductParent(Product $product): JsonResponse
+    {
+        $product->load('parentProduct');
+        return response()->json([
+            'has_parent'  => (bool) $product->parent_product_id,
+            'parent_id'   => $product->parent_product_id,
+            'parent_name' => $product->parentProduct?->product_name,
+        ]);
     }
 
     public function store(StoreProductionRequest $request): RedirectResponse
     {
         DB::transaction(function () use ($request) {
+            $data = $request->validated();
+
             $production = Production::create([
-                ...$request->validated(),
+                ...$data,
                 'user_id' => Auth::id(),
             ]);
 
+            // Add output product stock
             $this->inventoryService->addStock(
                 (float) $production->quantity_produced,
                 'production',
@@ -58,6 +75,18 @@ class ProductionController extends Controller
                 $production->product_id
             );
 
+            // Deduct parent/raw-material stock (e.g. Block Ice consumed to make Crushed Ice)
+            if ($production->parent_product_id && $production->parent_quantity_used > 0) {
+                $this->inventoryService->deductStock(
+                    (float) $production->parent_quantity_used,
+                    'production_material',
+                    $production->id,
+                    Auth::id(),
+                    'Raw material consumed for production #'.$production->id,
+                    $production->parent_product_id
+                );
+            }
+
             ActivityLogService::log(Auth::id(), 'create', 'productions', 'Created production #'.$production->id, $request);
         });
 
@@ -66,7 +95,7 @@ class ProductionController extends Controller
 
     public function edit(Production $production): View
     {
-        $products = Product::where('is_active', true)->orderBy('product_name')->get();
+        $products = Product::where('is_active', true)->with('parentProduct')->orderBy('product_name')->get();
         return view('productions.edit', compact('production', 'products'));
     }
 
@@ -74,25 +103,39 @@ class ProductionController extends Controller
     {
         try {
             DB::transaction(function () use ($request, $production) {
-                $oldQuantity = (float) $production->quantity_produced;
+                $oldQuantity  = (float) $production->quantity_produced;
                 $oldProductId = $production->product_id;
-                $data = $request->validated();
-                $newQuantity = (float) $data['quantity_produced'];
+                $oldParentId  = $production->parent_product_id;
+                $oldParentQty = (float) ($production->parent_quantity_used ?? 0);
+
+                $data         = $request->validated();
+                $newQuantity  = (float) $data['quantity_produced'];
                 $newProductId = (int) $data['product_id'];
+                $newParentId  = $data['parent_product_id'] ?? null;
+                $newParentQty = (float) ($data['parent_quantity_used'] ?? 0);
 
                 $production->update($data);
 
-                // If product changed, reverse old product stock and add to new product stock
+                // ── Output product stock adjustment ──────────────────────────
                 if ($oldProductId !== $newProductId) {
                     $this->inventoryService->deductStock($oldQuantity, 'production_adjustment', $production->id, Auth::id(), 'Production product changed - reversed', $oldProductId);
                     $this->inventoryService->addStock($newQuantity, 'production_adjustment', $production->id, Auth::id(), 'Production product changed - added', $newProductId);
                 } else {
-                    // Same product, just adjust quantity
                     if ($newQuantity > $oldQuantity) {
                         $this->inventoryService->addStock($newQuantity - $oldQuantity, 'production_adjustment', $production->id, Auth::id(), 'Production quantity increased', $newProductId);
                     } elseif ($newQuantity < $oldQuantity) {
                         $this->inventoryService->deductStock($oldQuantity - $newQuantity, 'production_adjustment', $production->id, Auth::id(), 'Production quantity reduced', $newProductId);
                     }
+                }
+
+                // ── Parent/raw-material stock adjustment ─────────────────────
+                // Restore old parent consumption first
+                if ($oldParentId && $oldParentQty > 0) {
+                    $this->inventoryService->addStock($oldParentQty, 'production_adjustment', $production->id, Auth::id(), 'Raw material restored - production updated', $oldParentId);
+                }
+                // Apply new parent consumption
+                if ($newParentId && $newParentQty > 0) {
+                    $this->inventoryService->deductStock($newParentQty, 'production_adjustment', $production->id, Auth::id(), 'Raw material consumed - production updated', $newParentId);
                 }
 
                 ActivityLogService::log(Auth::id(), 'update', 'productions', 'Updated production #'.$production->id, $request);
@@ -108,6 +151,7 @@ class ProductionController extends Controller
     {
         try {
             DB::transaction(function () use ($request, $production) {
+                // Reverse output product stock
                 $this->inventoryService->deductStock(
                     (float) $production->quantity_produced,
                     'production_delete',
@@ -116,6 +160,19 @@ class ProductionController extends Controller
                     'Deleted production stock reversal',
                     $production->product_id
                 );
+
+                // Restore parent/raw-material stock that was consumed
+                if ($production->parent_product_id && $production->parent_quantity_used > 0) {
+                    $this->inventoryService->addStock(
+                        (float) $production->parent_quantity_used,
+                        'production_delete',
+                        $production->id,
+                        Auth::id(),
+                        'Raw material restored - production deleted',
+                        $production->parent_product_id
+                    );
+                }
+
                 $id = $production->id;
                 $production->delete();
                 ActivityLogService::log(Auth::id(), 'delete', 'productions', 'Deleted production #'.$id, $request);

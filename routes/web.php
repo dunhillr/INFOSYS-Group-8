@@ -21,6 +21,7 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('products', ProductController::class)->except('show');
     Route::resource('customers', CustomerController::class)->except('show');
+    Route::get('productions/product-parent/{product}', [ProductionController::class, 'getProductParent'])->name('productions.product-parent');
     Route::resource('productions', ProductionController::class)->except('show');
     Route::resource('sales', SaleController::class)->except('show');
     Route::get('/sales-history', [SaleController::class, 'history'])->name('sales.history');
