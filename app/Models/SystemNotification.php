@@ -18,4 +18,20 @@ class SystemNotification extends Model
     }
 
     public function user(){ return $this->belongsTo(User::class); }
+
+    /**
+     * Helper method to send a notification to all active users.
+     */
+    public static function notifyUsers(string $type, string $title, string $message): void
+    {
+        $users = User::where('is_active', true)->get();
+        foreach ($users as $user) {
+            self::create([
+                'user_id' => $user->id,
+                'type' => $type,
+                'title' => $title,
+                'message' => $message,
+            ]);
+        }
+    }
 }

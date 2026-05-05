@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateProductionRequest;
 use App\Models\Inventory;
 use App\Models\Product;
 use App\Models\Production;
+use App\Models\SystemNotification;
 use App\Services\ActivityLogService;
 use App\Services\InventoryService;
 use Illuminate\Http\RedirectResponse;
@@ -59,6 +60,12 @@ class ProductionController extends Controller
             );
 
             ActivityLogService::log(Auth::id(), 'create', 'productions', 'Created production #'.$production->id, $request);
+
+            SystemNotification::notifyUsers(
+                'new_production',
+                'Production Alert',
+                'New production of '.$production->quantity_produced.' recorded.'
+            );
         });
 
         return redirect()->route('productions.index')->with('success', 'Production recorded successfully.');

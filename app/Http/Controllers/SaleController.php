@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateSaleRequest;
 use App\Models\Customer;
 use App\Models\Product;
 use App\Models\Sale;
+use App\Models\SystemNotification;
 use App\Models\Vehicle;
 use App\Services\ActivityLogService;
 use App\Services\InventoryService;
@@ -80,10 +81,29 @@ class SaleController extends Controller
                 // Update vehicle status to "in_use" if a vehicle is assigned
                 if ($data['vehicle_id'] ?? null) {
                     Vehicle::where('id', $data['vehicle_id'])->update(['status' => 'in_use']);
+
+                    // Automatically create a Delivery record
+                    $customer = Customer::find($data['customer_id'] ?? null);
+                    \App\Models\Delivery::create([
+                        'sale_id' => $sale->id,
+                        'customer_id' => $data['customer_id'],
+                        'vehicle_id' => $data['vehicle_id'],
+                        'destination' => $customer && $customer->customer_address ? $customer->customer_address : 'Not specified',
+                        'delivery_date' => $data['sale_date'],
+                        'delivery_time' => now()->format('H:i:s'),
+                        'status' => 'pending',
+                        'assigned_by' => Auth::id(),
+                    ]);
                 }
 
                 $this->inventoryService->deductStock($quantity, 'sale', $sale->id, Auth::id(), 'Sale stock deduction', $productId ? (int) $productId : null);
                 ActivityLogService::log(Auth::id(), 'create', 'sales', 'Created sale #'.$sale->id, $request);
+
+                SystemNotification::notifyUsers(
+                    'new_sale',
+                    'New Sale Recorded',
+                    'Sale #'.$sale->sale_number.' was recorded for total amount ₱'.number_format($totalAmount, 2).'.'
+                );
             });
         } catch (RuntimeException $exception) {
             return back()->withInput()->withErrors(['quantity' => $exception->getMessage()]);

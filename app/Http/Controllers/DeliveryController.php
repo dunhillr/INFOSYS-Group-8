@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateDeliveryRequest;
 use App\Models\Customer;
 use App\Models\Delivery;
 use App\Models\Sale;
+use App\Models\SystemNotification;
 use App\Models\Vehicle;
 use App\Services\ActivityLogService;
 use Illuminate\Http\RedirectResponse;
@@ -69,6 +70,7 @@ class DeliveryController extends Controller
     public function update(UpdateDeliveryRequest $request, Delivery $delivery): RedirectResponse
     {
         $data = $request->validated();
+        $oldStatus = $delivery->status;
 
         if (! empty($data['vehicle_id'])) {
             $conflict = Delivery::query()
@@ -90,6 +92,14 @@ class DeliveryController extends Controller
         ]);
 
         ActivityLogService::log(Auth::id(), 'update', 'deliveries', 'Updated delivery #'.$delivery->id, $request);
+
+        if ($oldStatus !== $data['status']) {
+            SystemNotification::notifyUsers(
+                'delivery_update',
+                'Delivery Status Updated',
+                'Delivery #'.$delivery->id.' status changed to '.$data['status'].'.'
+            );
+        }
 
         return redirect()->route('deliveries.index')->with('success', 'Delivery updated successfully.');
     }

@@ -102,13 +102,10 @@ class InventoryService
 
         $productName = $inventory->product?->product_name ?? 'Ice';
 
-        foreach (User::query()->where('user_type', 'owner')->get() as $owner) {
-            SystemNotification::create([
-                'user_id' => $owner->id,
-                'type' => 'low_stock',
-                'title' => 'Low Stock Alert',
-                'message' => "{$productName} inventory is below the low stock threshold. Current stock: {$inventory->current_stock}",
-            ]);
-        }
+        SystemNotification::notifyUsers(
+            'low_stock',
+            'Low Stock Alert',
+            "{$productName} inventory is below the low stock threshold. Current stock: {$inventory->current_stock}"
+        );
     }
 }
