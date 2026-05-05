@@ -69,11 +69,10 @@
                 <tr class="text-left border-b text-gray-600">
                     <th class="py-3">Date</th>
                     <th>Product</th>
-                    <th>Batch Ref</th>
+                    <th>Raw Material Used</th>
                     <th>Qty Produced</th>
                     <th>Available Stock</th>
                     <th>Encoded By</th>
-                    <th>Remarks</th>
                     <th width="150">Actions</th>
                 </tr>
             </thead>
@@ -98,7 +97,14 @@
                     </td>
 
                     <td class="text-gray-600">
-                        {{ $production->batch_reference ?? '-' }}
+                        @if($production->parentProduct && $production->parent_quantity_used)
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                                {{ number_format($production->parent_quantity_used, 2) }}×
+                                {{ $production->parentProduct->product_name }}
+                            </span>
+                        @else
+                            <span class="text-gray-300 text-xs">—</span>
+                        @endif
                     </td>
 
                     <td class="text-blue-600 font-semibold">
@@ -118,10 +124,6 @@
 
                     <td class="text-gray-800">
                         {{ $production->user->name ?? '-' }}
-                    </td>
-
-                    <td class="text-gray-500">
-                        {{ $production->remarks ?? '-' }}
                     </td>
 
                     <td class="flex gap-2 py-3">
@@ -147,7 +149,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="8" class="text-center py-6 text-gray-400">
+                    <td colspan="7" class="text-center py-6 text-gray-400">
                         No production records found.
                     </td>
                 </tr>
