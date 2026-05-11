@@ -47,12 +47,10 @@
                 <option
                     value="{{ $vehicle->id }}"
                     @selected(old('vehicle_id', $sale->vehicle_id ?? '') == $vehicle->id)
-                    @disabled($isUnavailable)
+                    @disabled($vehicle->remaining_capacity <= 0 && !$isCurrentVehicle)
                 >
-                    {{ $statusIcon }} {{ $vehicle->vehicle_name }} ({{ $vehicle->plate_number }})
-                    @if($isUnavailable)
-                        — {{ ucfirst($vehicle->status) }}
-                    @endif
+                    {{ $statusIcon }} {{ $vehicle->vehicle_name }} ({{ $vehicle->plate_number }}) 
+                    — Available: {{ number_format($vehicle->remaining_capacity, 2) }} kg
                 </option>
             @endforeach
         </select>
@@ -86,9 +84,15 @@
                 <button type="button" id="add_item_btn" class="bg-blue-100 hover:bg-blue-200 text-blue-800 font-semibold py-1 px-3 rounded shadow-sm text-sm transition">
                     + Add Product
                 </button>
-                <div class="text-right">
-                    <span class="text-gray-600 font-semibold">Items Subtotal: </span>
-                    <span class="text-lg font-bold text-gray-800" id="items_subtotal_display">₱0.00</span>
+                <div class="text-right flex flex-col items-end">
+                    <div class="mb-1">
+                        <span class="text-gray-500 text-xs">Total Weight: </span>
+                        <span class="text-sm font-bold text-gray-700" id="total_weight_display">0.00 kg</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-600 font-semibold">Items Subtotal: </span>
+                        <span class="text-lg font-bold text-gray-800" id="items_subtotal_display">₱0.00</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -196,6 +200,7 @@
             id: {{ $product->id }},
             name: "{{ addslashes($product->product_name) }}",
             price: {{ $product->default_price ?? 0 }},
+            weight: {{ $product->weight_kg ?? 0 }},
             stock: {{ isset($inventories) && isset($inventories[$product->id]) ? $inventories[$product->id]->current_stock : 0 }}
         },
         @endforeach
@@ -259,7 +264,7 @@
             let options = '<option value="">Select product...</option>';
             productsData.forEach(p => {
                 const selected = p.id == data.product_id ? 'selected' : '';
-                options += `<option value="${p.id}" data-price="${p.price}" data-stock="${p.stock}" ${selected}>${p.name}</option>`;
+                options += `<option value="${p.id}" data-price="${p.price}" data-weight="${p.weight}" data-stock="${p.stock}" ${selected}>${p.name}</option>`;
             });
 
             tr.innerHTML = `
@@ -427,19 +432,26 @@
 
         function calculateTotals() {
             let subtotal = 0;
+            let totalWeight = 0;
             
             // Calculate item subtotals
             const rows = tbody.querySelectorAll('tr');
             rows.forEach(row => {
+                const productSelect = row.querySelector('.item-product');
+                const selectedOption = productSelect.options[productSelect.selectedIndex];
+                const productWeight = selectedOption ? (parseFloat(selectedOption.getAttribute('data-weight')) || 0) : 0;
+                
                 const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
                 const price = parseFloat(row.querySelector('.item-price').value) || 0;
                 const rowSub = qty * price;
                 subtotal += rowSub;
+                totalWeight += (qty * productWeight);
                 
                 row.querySelector('.item-subtotal-display').textContent = `₱${rowSub.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
             });
 
             itemsSubtotalDisplay.textContent = `₱${subtotal.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('total_weight_display').textContent = `${totalWeight.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kg`;
 
             // Add Delivery Fee
             const deliveryFee = parseFloat(deliveryFeeInput.value) || 0;

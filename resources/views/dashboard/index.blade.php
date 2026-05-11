@@ -113,11 +113,11 @@
             <table class="min-w-full whitespace-nowrap table-auto border-collapse">
                 <thead class="bg-gray-50 border-b border-gray-100">
                     <tr>
-                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date/Time</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Sale No.</th>
                         <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Customer</th>
                         <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Destination</th>
                         <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Vehicle</th>
-                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status & Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
@@ -126,6 +126,11 @@
                             <td class="px-5 py-3 text-sm text-gray-700">
                                 {{ $delivery->delivery_date?->format('M d, Y') }} 
                                 <span class="text-gray-400 text-xs">{{ \Carbon\Carbon::parse($delivery->delivery_time)->format('h:i A') }}</span>
+                            </td>
+                            <td class="px-5 py-3 text-sm font-bold">
+                                <a href="{{ route('deliveries.edit', $delivery) }}" class="text-blue-600 hover:underline">
+                                    {{ $delivery->sale->sale_number ?? 'DET-'.$delivery->id }}
+                                </a>
                             </td>
                             <td class="px-5 py-3 text-sm text-gray-700 font-medium">
                                 {{ $delivery->customer->customer_name ?? 'Walk-in' }}
@@ -140,18 +145,49 @@
                                 {{ $delivery->vehicle->vehicle_name ?? 'Unassigned' }}
                             </td>
                             <td class="px-5 py-3 text-sm">
-                                @php
-                                    $statusColors = [
-                                        'pending' => 'bg-yellow-100 text-yellow-800',
-                                        'out_for_delivery' => 'bg-blue-100 text-blue-800',
-                                        'delivered' => 'bg-green-100 text-green-800',
-                                        'cancelled' => 'bg-red-100 text-red-800',
-                                    ];
-                                    $colorClass = $statusColors[$delivery->status] ?? 'bg-gray-100 text-gray-800';
-                                @endphp
-                                <span class="px-2.5 py-1 rounded-full text-xs font-medium {{ $colorClass }}">
-                                    {{ ucwords(str_replace('_', ' ', $delivery->status)) }}
-                                </span>
+                                <div class="flex items-center gap-3">
+                                    @php
+                                        $statusColors = [
+                                            'pending' => 'bg-yellow-100 text-yellow-800',
+                                            'out_for_delivery' => 'bg-blue-100 text-blue-800',
+                                            'delivered' => 'bg-green-100 text-green-800',
+                                            'cancelled' => 'bg-red-100 text-red-800',
+                                        ];
+                                        $colorClass = $statusColors[$delivery->status] ?? 'bg-gray-100 text-gray-800';
+                                    @endphp
+                                    <span class="px-2.5 py-1 rounded-full text-[10px] font-bold {{ $colorClass }}">
+                                        {{ ucwords(str_replace('_', ' ', $delivery->status)) }}
+                                    </span>
+
+                                    {{-- Dynamic Actions --}}
+                                    <div class="flex gap-1">
+                                        @if($delivery->status === 'pending')
+                                            <form action="{{ route('deliveries.updateStatus', $delivery) }}" method="POST">
+                                                @csrf @method('PATCH')
+                                                <input type="hidden" name="status" value="out_for_delivery">
+                                                <button type="submit" class="bg-blue-600 text-white px-2 py-0.5 rounded text-[10px] font-bold hover:bg-blue-700 transition">
+                                                    Dispatch
+                                                </button>
+                                            </form>
+                                        @elseif($delivery->status === 'out_for_delivery')
+                                            <form action="{{ route('deliveries.updateStatus', $delivery) }}" method="POST">
+                                                @csrf @method('PATCH')
+                                                <input type="hidden" name="status" value="delivered">
+                                                <button type="submit" class="bg-green-600 text-white px-2 py-0.5 rounded text-[10px] font-bold hover:bg-green-700 transition">
+                                                    Done
+                                                </button>
+                                            </form>
+                                        @else
+                                            {{-- Eye icon for finished deliveries --}}
+                                            <a href="{{ route('deliveries.edit', $delivery) }}" class="text-blue-500 hover:bg-blue-100 p-1 rounded transition" title="View Details">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                </svg>
+                                            </a>
+                                        @endif
+                                    </div>
+                                </div>
                             </td>
                         </tr>
                     @endforeach

@@ -26,6 +26,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('sales', SaleController::class)->except('show');
     Route::get('/sales-history', [SaleController::class, 'history'])->name('sales.history');
     Route::resource('vehicles', VehicleController::class)->except('show');
+    Route::patch('deliveries/{delivery}/status', [DeliveryController::class, 'updateStatus'])->name('deliveries.updateStatus');
     Route::resource('deliveries', DeliveryController::class)->except('show');
 
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');

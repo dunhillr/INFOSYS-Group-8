@@ -25,9 +25,30 @@ class SaleController extends Controller
     {
     }
 
-    public function index(): View
+    public function index(Request $request): View
     {
-        $sales = Sale::with(['saleItems.product', 'customer', 'user'])->latest()->paginate(10);
+        $query = Sale::with(['customer', 'vehicle'])->latest();
+
+        // Search by Customer Name or Sale Number
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('sale_number', 'like', "%{$search}%")
+                  ->orWhereHas('customer', function($cq) use ($search) {
+                      $cq->where('customer_name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // Filter by Date Range
+        if ($request->filled('start_date')) {
+            $query->whereDate('created_at', '>=', $request->start_date);
+        }
+        if ($request->filled('end_date')) {
+            $query->whereDate('created_at', '<=', $request->end_date);
+        }
+
+        $sales = $query->paginate(10)->withQueryString();
         return view('sales.index', compact('sales'));
     }
 
@@ -35,8 +56,25 @@ class SaleController extends Controller
     {
         $customers   = Customer::orderBy('customer_name')->get();
         $products    = Product::where('is_active', true)->orderBy('product_name')->get();
-        $vehicles    = Vehicle::orderBy('vehicle_name')->get();
         $inventories = Inventory::whereNotNull('product_id')->get()->keyBy('product_id');
+
+        // Fetch vehicles and calculate remaining capacity
+        $vehicles = Vehicle::orderBy('vehicle_name')->get()->map(function ($vehicle) {
+            // Calculate current load from pending/out_for_delivery deliveries
+            $currentLoad = \App\Models\Delivery::where('vehicle_id', $vehicle->id)
+                ->whereIn('status', ['pending', 'out_for_delivery'])
+                ->with('sale.saleItems.product')
+                ->get()
+                ->sum(function ($delivery) {
+                    return $delivery->sale->saleItems->sum(function ($item) {
+                        return (float) $item->quantity * (float) ($item->product->weight_kg ?? 0);
+                    });
+                });
+
+            $vehicle->remaining_capacity = max(0, (float) $vehicle->capacity - $currentLoad);
+            return $vehicle;
+        });
+
         return view('sales.create', compact('customers', 'products', 'vehicles', 'inventories'));
     }
 
@@ -95,6 +133,20 @@ class SaleController extends Controller
                 }
                 $saleNumber = 'SALE-' . $today . '-' . str_pad($sequence, 3, '0', STR_PAD_LEFT);
 
+                // Check Vehicle Capacity if a vehicle is assigned
+                if (!empty($data['vehicle_id'])) {
+                    $vehicle = Vehicle::findOrFail($data['vehicle_id']);
+                    $totalWeight = 0;
+                    foreach ($items as $item) {
+                        $product = Product::findOrFail($item['product_id']);
+                        $totalWeight += ($item['quantity'] * ($product->weight_kg ?? 0));
+                    }
+
+                    if ($totalWeight > $vehicle->capacity) {
+                        throw new RuntimeException("Vehicle capacity exceeded! Total weight: " . number_format($totalWeight, 2) . "kg, Vehicle capacity: " . number_format($vehicle->capacity, 2) . "kg");
+                    }
+                }
+
                 $sale = Sale::create([
                     'sale_number'     => $saleNumber,
                     'customer_id'     => $data['customer_id'] ?? null,
@@ -130,7 +182,7 @@ class SaleController extends Controller
 
                 // Update vehicle status and auto-create Delivery only for non-walk-in types
                 if (($data['vehicle_id'] ?? null) && $data['delivery_type'] !== 'walk_in') {
-                    Vehicle::where('id', $data['vehicle_id'])->update(['status' => 'in_use']);
+                    Vehicle::where('id', $data['vehicle_id'])->update(['status' => 'reserved']);
 
                     // Automatically create a Delivery record
                     $customer = Customer::find($data['customer_id'] ?? null);
@@ -171,8 +223,26 @@ class SaleController extends Controller
         $sale->load('saleItems.product');
         $customers   = Customer::orderBy('customer_name')->get();
         $products    = Product::where('is_active', true)->orderBy('product_name')->get();
-        $vehicles    = Vehicle::orderBy('vehicle_name')->get();
         $inventories = Inventory::whereNotNull('product_id')->get()->keyBy('product_id');
+
+        // Fetch vehicles and calculate remaining capacity
+        $vehicles = Vehicle::orderBy('vehicle_name')->get()->map(function ($vehicle) use ($sale) {
+            // Calculate current load from pending/out_for_delivery deliveries, excluding THIS sale
+            $currentLoad = \App\Models\Delivery::where('vehicle_id', $vehicle->id)
+                ->where('sale_id', '!=', $sale->id) // Exclude current sale
+                ->whereIn('status', ['pending', 'out_for_delivery'])
+                ->with('sale.saleItems.product')
+                ->get()
+                ->sum(function ($delivery) {
+                    return $delivery->sale->saleItems->sum(function ($item) {
+                        return (float) $item->quantity * (float) ($item->product->weight_kg ?? 0);
+                    });
+                });
+
+            $vehicle->remaining_capacity = max(0, (float) $vehicle->capacity - $currentLoad);
+            return $vehicle;
+        });
+
         return view('sales.edit', compact('sale', 'customers', 'products', 'vehicles', 'inventories'));
     }
 
@@ -211,6 +281,20 @@ class SaleController extends Controller
                 $paymentStatus = $data['payment_status'];
                 $amountPaid = 0;
                 $balanceDue = $totalAmount;
+
+                // Check Vehicle Capacity if a vehicle is assigned
+                if (!empty($data['vehicle_id'])) {
+                    $vehicle = Vehicle::findOrFail($data['vehicle_id']);
+                    $totalWeight = 0;
+                    foreach ($items as $item) {
+                        $product = Product::findOrFail($item['product_id']);
+                        $totalWeight += ($item['quantity'] * ($product->weight_kg ?? 0));
+                    }
+
+                    if ($totalWeight > $vehicle->capacity) {
+                        throw new RuntimeException("Vehicle capacity exceeded! Total weight: " . number_format($totalWeight, 2) . "kg, Vehicle capacity: " . number_format($vehicle->capacity, 2) . "kg");
+                    }
+                }
 
                 if ($paymentStatus === 'paid') {
                     $amountPaid = $totalAmount;
@@ -261,9 +345,9 @@ class SaleController extends Controller
                         Vehicle::where('id', $oldVehicleId)->update(['status' => 'available']);
                     }
 
-                    // Update new vehicle status to "in_use" if a vehicle is now assigned
+                    // Update new vehicle status to "reserved" if a vehicle is now assigned
                     if ($newVehicleId && $data['delivery_type'] !== 'walk_in') {
-                        Vehicle::where('id', $newVehicleId)->update(['status' => 'in_use']);
+                        Vehicle::where('id', $newVehicleId)->update(['status' => 'reserved']);
                     }
                 }
 

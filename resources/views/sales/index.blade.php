@@ -40,6 +40,32 @@
         Sales Records
     </div>
 
+    <!-- FILTERS -->
+    <div class="p-5 bg-gray-50 border-b border-gray-100">
+        <form action="{{ route('sales.index') }}" method="GET" class="grid grid-cols-12 gap-4">
+            <div class="xl:col-span-4 col-span-12">
+                <label class="text-xs font-bold text-gray-500 uppercase mb-1 block">Search</label>
+                <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="Search Sale No. or Customer Name...">
+            </div>
+            <div class="xl:col-span-3 col-span-12">
+                <label class="text-xs font-bold text-gray-500 uppercase mb-1 block">Start Date</label>
+                <input type="date" name="start_date" value="{{ request('start_date') }}" class="form-control">
+            </div>
+            <div class="xl:col-span-3 col-span-12">
+                <label class="text-xs font-bold text-gray-500 uppercase mb-1 block">End Date</label>
+                <input type="date" name="end_date" value="{{ request('end_date') }}" class="form-control">
+            </div>
+            <div class="xl:col-span-2 col-span-12 flex items-end gap-2">
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex-1">
+                    Filter
+                </button>
+                <a href="{{ route('sales.index') }}" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition" title="Reset Filters">
+                    Reset
+                </a>
+            </div>
+        </form>
+    </div>
+
     <!-- TABLE -->
     <div class="p-5 overflow-auto">
 
