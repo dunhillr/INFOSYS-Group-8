@@ -1,12 +1,13 @@
 @extends('layouts.app')
-@section('title', 'Update Delivery Status')
+
+@section('title', 'Track Delivery')
 
 @section('content')
 
 <!-- PAGE HEADER -->
 <div class="block justify-between page-header md:flex mt-4">
     <div>
-        <h3 class="text-2xl font-bold text-gray-800">Update Delivery Status</h3>
+        <h3 class="text-2xl font-bold text-gray-800">Track & Update Delivery</h3>
         <p class="text-sm text-gray-500">Manage the progress of Delivery #{{ $delivery->id }}</p>
     </div>
 </div>
@@ -55,7 +56,7 @@
     <div class="xl:col-span-8 col-span-12">
         <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
             <div class="bg-blue-600 text-white px-5 py-3 font-semibold">
-                Update Status & Notes
+                Update Status & Tracking Notes
             </div>
             <div class="p-5">
                 <form action="{{ route('deliveries.update', $delivery) }}" method="POST">
@@ -74,8 +75,9 @@
                         </div>
 
                         <div class="col-span-12">
-                            <label class="form-label font-semibold">Update Notes / Remarks</label>
-                            <textarea name="notes" class="form-control" rows="3" placeholder="Add details about the current status update...">{{ old('notes', $delivery->notes) }}</textarea>
+                            <label class="form-label font-semibold">Update Status Notes</label>
+                            <textarea name="notes" class="form-control" rows="3" placeholder="Enter any updates or notes regarding the current delivery status..."></textarea>
+                            <div class="text-[10px] text-muted mt-1">These notes will be added to the tracking history.</div>
                         </div>
                     </div>
 

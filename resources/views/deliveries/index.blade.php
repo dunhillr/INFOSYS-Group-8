@@ -52,6 +52,7 @@
                         <th class="px-4 py-3 text-xs font-bold uppercase">Vehicle</th>
                         <th class="px-4 py-3 text-xs font-bold uppercase">Destination</th>
                         <th class="px-4 py-3 text-xs font-bold uppercase text-center">Status</th>
+                        <th class="px-4 py-3 text-xs font-bold uppercase">Latest Update</th>
                         <th class="px-4 py-3 text-xs font-bold uppercase text-center">Actions</th>
                     </tr>
                 </thead>
@@ -89,6 +90,17 @@
                             </span>
                         </td>
                         <td class="px-4 py-3">
+                            @php $latestLog = $delivery->logs->first(); @endphp
+                            @if($latestLog)
+                                <div class="text-xs truncate max-w-[200px]" title="{{ $latestLog->notes }}">
+                                    {{ $latestLog->notes ?: 'Status changed to '.str_replace('_', ' ', $latestLog->status) }}
+                                </div>
+                                <div class="text-[9px] text-gray-400">{{ $latestLog->created_at->diffForHumans() }}</div>
+                            @else
+                                <span class="text-gray-400 text-xs italic">No updates</span>
+                            @endif
+                        </td>
+                        <td class="px-4 py-3">
                             <div class="flex justify-center items-center gap-2">
                                 {{-- ── STATUS-BASED ACTIONS ── --}}
                                 @if($delivery->status === 'pending')
@@ -114,19 +126,19 @@
                                             ❌ Cancel
                                         </button>
                                     </form>
-                                @else
-                                    {{-- ── SHOW EYE ICON ONLY WHEN DONE ── --}}
-                                    <a href="{{ route('deliveries.edit', $delivery) }}" class="text-blue-500 hover:text-blue-700 transition p-1 bg-blue-50 rounded-lg flex items-center gap-1 px-3 py-1.5 text-xs font-bold" title="View Details">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                        </svg>
-                                        View Details
-                                    </a>
                                 @endif
 
+                                {{-- ── ALWAYS SHOW TRACK ACTION ── --}}
+                                <a href="{{ route('deliveries.edit', $delivery) }}" class="text-blue-500 hover:text-blue-700 transition p-1 bg-blue-50 rounded-lg flex items-center gap-1 px-3 py-1.5 text-xs font-bold" title="Track & Update">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                    Track
+                                </a>
+
                                 {{-- Owner Delete Action (Optional, kept subtle) --}}
-                                @if(Auth::user()->role === 'owner')
+                                @if(Auth::user()->user_type === 'owner')
                                 <form action="{{ route('deliveries.destroy', $delivery) }}" method="POST" onsubmit="return confirm('Delete this record?')" class="ms-1">
                                     @csrf @method('DELETE')
                                     <button class="text-gray-300 hover:text-red-500 transition p-1" title="Delete">
@@ -141,7 +153,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6" class="text-center py-12 text-gray-400 italic">No delivery records found.</td>
+                        <td colspan="7" class="text-center py-12 text-gray-400 italic">No delivery records found.</td>
                     </tr>
                     @endforelse
                 </tbody>
@@ -152,4 +164,5 @@
         </div>
     </div>
 </div>
+
 @endsection
