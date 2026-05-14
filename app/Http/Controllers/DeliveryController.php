@@ -19,7 +19,7 @@ class DeliveryController extends Controller
 {
     public function index(Request $request): View
     {
-        $query = Delivery::with(['sale', 'customer', 'vehicle', 'assigner', 'deliverer'])->latest();
+        $query = Delivery::with(['sale', 'customer', 'vehicle', 'assigner', 'deliverer', 'logs'])->latest();
 
         // Search by Customer Name or Sale Number
         if ($request->filled('search')) {
