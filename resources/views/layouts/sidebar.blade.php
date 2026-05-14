@@ -85,12 +85,22 @@
                 </a>
             </li>
 
-            <!-- DELIVERIES -->
+            @php
+                $unreadDeliveries = \App\Models\Delivery::where('is_opened', false)->count();
+            @endphp
             <li>
                 <a href="{{ route('deliveries.index') }}" 
                    class="flex items-center gap-3 px-4 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">
-                    <i class="bx bx-truck text-lg text-blue-500"></i>
+                    <div class="relative">
+                        <i class="bx bx-truck text-lg text-blue-500"></i>
+                        @if($unreadDeliveries > 0)
+                            <span class="absolute top-0 right-0 block h-2 w-2 rounded-full bg-primary ring-2 ring-white"></span>
+                        @endif
+                    </div>
                     <span>Deliveries</span>
+                    @if($unreadDeliveries > 0)
+                        <span class="ms-auto badge bg-primary/10 text-primary text-[10px] px-1.5 py-0.5 rounded-full">{{ $unreadDeliveries }}</span>
+                    @endif
                 </a>
             </li>
 
