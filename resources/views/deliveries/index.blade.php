@@ -141,7 +141,7 @@ function setThisWeek() {
 
 <div class="box">
     <div class="box-body">
-        <div class="overflow-auto">
+        <div class="overflow-visible pb-24">
             <table class="table min-w-full whitespace-nowrap table-bordered">
                 <thead class="bg-gray-50 text-gray-700">
                     <tr>
@@ -150,7 +150,6 @@ function setThisWeek() {
                         <th class="px-4 py-3 text-xs font-bold uppercase">Vehicle</th>
                         <th class="px-4 py-3 text-xs font-bold uppercase">Destination</th>
                         <th class="px-4 py-3 text-xs font-bold uppercase text-center">Status</th>
-                        <th class="px-4 py-3 text-xs font-bold uppercase">Latest Update</th>
                         <th class="px-4 py-3 text-xs font-bold uppercase text-center">Actions</th>
                     </tr>
                 </thead>
@@ -161,6 +160,11 @@ function setThisWeek() {
                             <span class="font-bold text-gray-800">{{ $delivery->sale->sale_number ?? 'DET-'.$delivery->id }}</span>
                             @if(!$delivery->is_opened)
                                 <span class="badge bg-blue-600 text-white text-[10px] px-1.5 ms-1">NEW</span>
+                            @endif
+                            @if($delivery->proof_of_delivery)
+                                <span class="text-green-600 ms-1" title="Proof of Delivery Uploaded">
+                                    <i class="bx bx-camera text-sm"></i>
+                                </span>
                             @endif
                         </td>
                         <td class="px-4 py-3 text-sm text-gray-600">{{ $delivery->customer->customer_name ?? '-' }}</td>
@@ -187,71 +191,72 @@ function setThisWeek() {
                                 {{ $label }}
                             </span>
                         </td>
-                        <td class="px-4 py-3">
-                            @php $latestLog = $delivery->logs->first(); @endphp
-                            @if($latestLog)
-                                <div class="text-xs truncate max-w-[200px]" title="{{ $latestLog->notes }}">
-                                    {{ $latestLog->notes ?: 'Status changed to '.str_replace('_', ' ', $latestLog->status) }}
-                                </div>
-                                <div class="text-[9px] text-gray-400">{{ $latestLog->created_at->diffForHumans() }}</div>
-                            @else
-                                <span class="text-gray-400 text-xs italic">No updates</span>
-                            @endif
-                        </td>
-                        <td class="px-4 py-3">
-                            <div class="flex justify-center items-center gap-2">
-                                {{-- ── STATUS-BASED ACTIONS ── --}}
-                                @if($delivery->status === 'pending')
-                                    <form action="{{ route('deliveries.updateStatus', $delivery) }}" method="POST">
-                                        @csrf @method('PATCH')
-                                        <input type="hidden" name="status" value="out_for_delivery">
-                                        <button type="submit" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm hover:bg-blue-700 transition">
-                                            🚚 Dispatch
-                                        </button>
-                                    </form>
-                                @elseif($delivery->status === 'out_for_delivery')
-                                    <form action="{{ route('deliveries.updateStatus', $delivery) }}" method="POST" class="inline-block">
-                                        @csrf @method('PATCH')
-                                        <input type="hidden" name="status" value="delivered">
-                                        <button type="submit" class="bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm hover:bg-green-700 transition">
-                                            ✅ Complete
-                                        </button>
-                                    </form>
-                                    <form action="{{ route('deliveries.updateStatus', $delivery) }}" method="POST" class="inline-block">
-                                        @csrf @method('PATCH')
-                                        <input type="hidden" name="status" value="cancelled">
-                                        <button type="submit" class="bg-red-50 text-red-600 border border-red-200 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-100 transition">
-                                            ❌ Cancel
-                                        </button>
-                                    </form>
-                                @endif
-
-                                {{-- ── ALWAYS SHOW TRACK ACTION ── --}}
-                                <a href="{{ route('deliveries.edit', $delivery) }}" class="text-blue-500 hover:text-blue-700 transition p-1 bg-blue-50 rounded-lg flex items-center gap-1 px-3 py-1.5 text-xs font-bold" title="Track & Update">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                    </svg>
-                                    Track
-                                </a>
-
-                                {{-- Owner Delete Action (Optional, kept subtle) --}}
-                                @if(Auth::user()->user_type === 'owner')
-                                <form action="{{ route('deliveries.destroy', $delivery) }}" method="POST" onsubmit="return confirm('Delete this record?')" class="ms-1">
-                                    @csrf @method('DELETE')
-                                    <button class="text-gray-300 hover:text-red-500 transition p-1" title="Delete">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        <td class="px-4 py-3 text-center">
+                            <div class="flex justify-center items-center">
+                                {{-- ── CONSOLIDATED MANAGE DROPDOWN ── --}}
+                                <div class="hs-dropdown relative inline-flex [--placement:bottom-right]">
+                                    <button id="actions-{{ $delivery->id }}" type="button" class="hs-dropdown-toggle bg-white border border-gray-200 text-gray-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-gray-50 transition flex items-center gap-1 shadow-sm">
+                                        Manage
+                                        <svg class="hs-dropdown-open:rotate-180 w-3.5 h-3.5 transition-transform" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                                         </svg>
                                     </button>
-                                </form>
-                                @endif
+
+                                    <div class="hs-dropdown-menu transition-[opacity,margin] duration hs-dropdown-open:opacity-100 opacity-0 hidden z-[100] bg-white shadow-xl rounded-xl p-2 mt-2 border border-gray-100 min-w-[180px] text-start" aria-labelledby="actions-{{ $delivery->id }}">
+                                        {{-- ── SET TO PENDING ── --}}
+                                        @if($delivery->status !== 'pending')
+                                            <form action="{{ route('deliveries.updateStatus', $delivery) }}" method="POST">
+                                                @csrf @method('PATCH')
+                                                <input type="hidden" name="status" value="pending">
+                                                <button type="submit" class="w-full flex items-center gap-2 py-2 px-3 rounded-md text-sm text-yellow-600 hover:bg-yellow-50 font-bold text-start">
+                                                    🕐 Set Pending
+                                                </button>
+                                            </form>
+                                        @endif
+
+                                        {{-- ── MARK DELIVERED ── --}}
+                                        @if($delivery->status !== 'delivered')
+                                            <form action="{{ route('deliveries.updateStatus', $delivery) }}" method="POST">
+                                                @csrf @method('PATCH')
+                                                <input type="hidden" name="status" value="delivered">
+                                                <button type="submit" class="w-full flex items-center gap-2 py-2 px-3 rounded-md text-sm text-green-600 hover:bg-green-50 font-bold text-start">
+                                                    ✅ Mark Delivered
+                                                </button>
+                                            </form>
+                                        @endif
+
+                                        {{-- ── CANCEL DELIVERY ── --}}
+                                        @if($delivery->status !== 'cancelled')
+                                            <form action="{{ route('deliveries.updateStatus', $delivery) }}" method="POST">
+                                                @csrf @method('PATCH')
+                                                <input type="hidden" name="status" value="cancelled">
+                                                <button type="submit" class="w-full flex items-center gap-2 py-2 px-3 rounded-md text-sm text-red-600 hover:bg-red-50 font-bold text-start">
+                                                    ❌ Cancel Delivery
+                                                </button>
+                                            </form>
+                                        @endif
+
+                                        {{-- ── OWNER DELETE (SUBTLE) ── --}}
+                                        @if(Auth::user()->user_type === 'owner')
+                                            <div class="h-px bg-gray-100 my-1"></div>
+                                            <form action="{{ route('deliveries.destroy', $delivery) }}" method="POST" onsubmit="return confirm('Delete this record?')">
+                                                @csrf @method('DELETE')
+                                                <button type="submit" class="w-full flex items-center gap-2 py-2 px-3 rounded-md text-xs text-gray-400 hover:text-red-600 hover:bg-red-50 font-medium text-start">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                    Delete Record
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </div>
+                                </div>
                             </div>
                         </td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="7" class="text-center py-12 text-gray-400 italic">No delivery records found.</td>
+                        <td colspan="6" class="text-center py-12 text-gray-400 italic">No delivery records found.</td>
                     </tr>
                     @endforelse
                 </tbody>
@@ -262,5 +267,4 @@ function setThisWeek() {
         </div>
     </div>
 </div>
-
 @endsection
