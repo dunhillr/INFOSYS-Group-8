@@ -3,6 +3,7 @@
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeliveryController;
+use App\Http\Controllers\DriverPortalController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductionController;
@@ -16,7 +17,16 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
-Route::middleware('auth')->group(function () {
+// ── Driver Portal (mobile-first, driver role only) ─────────────────────────
+Route::middleware(['auth', 'role:driver'])->prefix('driver')->name('driver.')->group(function () {
+    Route::get('/',                            [DriverPortalController::class, 'index'])->name('index');
+    Route::get('/delivery/{delivery}',         [DriverPortalController::class, 'show'])->name('show');
+    Route::post('/delivery/{delivery}/start',  [DriverPortalController::class, 'startDelivery'])->name('start');
+    Route::post('/delivery/{delivery}/confirm',[DriverPortalController::class, 'confirmDelivery'])->name('confirm');
+});
+
+// ── Admin / Staff Area ─────────────────────────────────────────────────────
+Route::middleware(['auth', 'role:owner,employee'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::resource('products', ProductController::class)->except('show');
@@ -41,6 +51,7 @@ Route::middleware('auth')->group(function () {
         Route::get('delivery', [ReportController::class, 'delivery'])->name('delivery');
     });
 
+    // Owner-only routes
     Route::middleware('role:owner')->group(function () {
         Route::resource('users', UserController::class)->except('show');
         Route::get('reports/activity', [ReportController::class, 'activity'])->name('reports.activity');
