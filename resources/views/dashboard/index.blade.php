@@ -29,7 +29,7 @@
 <!-- STATS CARDS -->
 <div class="grid grid-cols-12 gap-6">
 
-    <div class="xl:col-span-4 col-span-12">
+    <div class="xl:col-span-3 col-span-12">
         <div class="bg-white border-l-4 border-blue-500 rounded-xl shadow-sm p-5 hover:shadow-md transition">
             <p class="text-sm text-gray-500">Today Production (All Products)</p>
             <h4 class="text-2xl font-bold text-blue-600">
@@ -38,7 +38,7 @@
         </div>
     </div>
 
-    <div class="xl:col-span-4 col-span-12">
+    <div class="xl:col-span-3 col-span-12">
         <div class="bg-white border-l-4 border-blue-500 rounded-xl shadow-sm p-5 hover:shadow-md transition">
             <p class="text-sm text-gray-500">Today Sales</p>
             <h4 class="text-2xl font-bold text-blue-600">
@@ -47,11 +47,20 @@
         </div>
     </div>
 
-    <div class="xl:col-span-4 col-span-12">
-        <div class="bg-white border-l-4 border-blue-500 rounded-xl shadow-sm p-5 hover:shadow-md transition">
+    <div class="xl:col-span-3 col-span-12">
+        <div class="bg-white border-l-4 border-yellow-500 rounded-xl shadow-sm p-5 hover:shadow-md transition">
             <p class="text-sm text-gray-500">Pending Deliveries</p>
-            <h4 class="text-2xl font-bold text-blue-600">
+            <h4 class="text-2xl font-bold text-yellow-600">
                 {{ $pendingDeliveries }}
+            </h4>
+        </div>
+    </div>
+
+    <div class="xl:col-span-3 col-span-12">
+        <div class="bg-white border-l-4 border-purple-500 rounded-xl shadow-sm p-5 hover:shadow-md transition">
+            <p class="text-sm text-gray-500">In Transit</p>
+            <h4 class="text-2xl font-bold text-purple-600">
+                {{ $inTransitDeliveries }}
             </h4>
         </div>
     </div>
