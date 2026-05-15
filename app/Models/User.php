@@ -39,4 +39,8 @@ class User extends Authenticatable
     public function logs(){ return $this->hasMany(UserLog::class); }
     public function assignedDeliveries(){ return $this->hasMany(Delivery::class, 'assigned_by'); }
     public function completedDeliveries(){ return $this->hasMany(Delivery::class, 'delivered_by'); }
+    public function driverDeliveries(){ return $this->hasMany(Delivery::class, 'driver_id'); }
+    public function isDriver(): bool { return $this->user_type === 'driver'; }
+    public function isOwner(): bool { return $this->user_type === 'owner'; }
+    public function isEmployee(): bool { return $this->user_type === 'employee'; }
 }
