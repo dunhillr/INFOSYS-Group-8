@@ -23,6 +23,7 @@ class DashboardController extends Controller
         $todayProduction = Production::query()->whereDate('production_date', now()->toDateString())->sum('quantity_produced');
         $todaySales = Sale::query()->whereDate('sale_date', now()->toDateString())->sum('total_amount');
         $pendingDeliveries = Delivery::query()->where('status', 'pending')->count();
+        $inTransitDeliveries = Delivery::query()->where('status', 'out_for_delivery')->count();
 
         // Today's production breakdown per product
         $todayProductionByProduct = Production::query()
@@ -50,6 +51,7 @@ class DashboardController extends Controller
             'todayProduction',
             'todaySales',
             'pendingDeliveries',
+            'inTransitDeliveries',
             'todayProductionByProduct',
             'notifications',
             'logs',
