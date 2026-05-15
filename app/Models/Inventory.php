@@ -16,6 +16,7 @@ class Inventory extends Model
         return ['current_stock' => 'decimal:2', 'low_stock_threshold' => 'decimal:2'];
     }
 
+    public function product(){ return $this->belongsTo(Product::class); }
     public function logs(){ return $this->hasMany(InventoryLog::class); }
     public function updater(){ return $this->belongsTo(User::class, 'updated_by'); }
 }
