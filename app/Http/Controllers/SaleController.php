@@ -27,11 +27,11 @@ class SaleController extends Controller
 
     public function index(Request $request): View
     {
-        $query = Sale::with(['customer', 'vehicle'])->latest();
+        $query = Sale::with(['saleItems.product', 'customer', 'user', 'vehicle'])->latest();
 
-        // Search by Customer Name or Sale Number
+        // Search Filter
         if ($request->filled('search')) {
-            $search = $request->search;
+            $search = trim($request->search);
             $query->where(function($q) use ($search) {
                 $q->where('sale_number', 'like', "%{$search}%")
                   ->orWhereHas('customer', function($cq) use ($search) {
@@ -40,12 +40,27 @@ class SaleController extends Controller
             });
         }
 
-        // Filter by Date Range
-        if ($request->filled('start_date')) {
-            $query->whereDate('created_at', '>=', $request->start_date);
+        // Payment Status Filter
+        if ($request->filled('payment_status')) {
+            $query->where('payment_status', $request->payment_status);
         }
-        if ($request->filled('end_date')) {
-            $query->whereDate('created_at', '<=', $request->end_date);
+
+        // Date Range Filter (Supports Flatpickr Range)
+        if ($request->filled('date_range')) {
+            $dates = explode(' to ', $request->date_range);
+            if (count($dates) == 2) {
+                $start = \Carbon\Carbon::parse($dates[0], 'Asia/Manila')->startOfDay()->setTimezone('UTC');
+                $end = \Carbon\Carbon::parse($dates[1], 'Asia/Manila')->endOfDay()->setTimezone('UTC');
+                $query->whereBetween('sale_date', [$start, $end]);
+            } else {
+                $date = \Carbon\Carbon::parse($dates[0], 'Asia/Manila')->startOfDay()->setTimezone('UTC');
+                $query->whereDate('sale_date', $date);
+            }
+        } elseif ($request->filled('start_date') && $request->filled('end_date')) {
+            // Fallback for shortcut buttons
+            $start = \Carbon\Carbon::parse($request->start_date, 'Asia/Manila')->startOfDay()->setTimezone('UTC');
+            $end = \Carbon\Carbon::parse($request->end_date, 'Asia/Manila')->endOfDay()->setTimezone('UTC');
+            $query->whereBetween('sale_date', [$start, $end]);
         }
 
         $sales = $query->paginate(10)->withQueryString();
@@ -380,11 +395,41 @@ class SaleController extends Controller
         return redirect()->route('sales.index')->with('success', 'Sale deleted successfully.');
     }
 
-    public function history(): View
+    public function history(Request $request): View
     {
-        $sales = Sale::with(['saleItems.product', 'customer', 'vehicle', 'user'])
-            ->orderByDesc('sale_date')
-            ->paginate(15);
+        $query = Sale::with(['saleItems.product', 'customer', 'vehicle', 'user'])->latest('sale_date');
+
+        // Search Filter (Sale # or Customer)
+        if ($request->filled('search')) {
+            $search = trim($request->search);
+            $query->where(function($q) use ($search) {
+                $q->where('sale_number', 'like', "%{$search}%")
+                  ->orWhereHas('customer', function($cq) use ($search) {
+                      $cq->where('customer_name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // Date Range Filter (Supports Flatpickr Range)
+        if ($request->filled('date_range')) {
+            $dates = explode(' to ', $request->date_range);
+            if (count($dates) == 2) {
+                $start = \Carbon\Carbon::parse($dates[0], 'Asia/Manila')->startOfDay()->setTimezone('UTC');
+                $end = \Carbon\Carbon::parse($dates[1], 'Asia/Manila')->endOfDay()->setTimezone('UTC');
+                $query->whereBetween('sale_date', [$start, $end]);
+            } else {
+                // Single date selected
+                $date = \Carbon\Carbon::parse($dates[0], 'Asia/Manila')->startOfDay()->setTimezone('UTC');
+                $query->whereDate('sale_date', $date);
+            }
+        } elseif ($request->filled('start_date') && $request->filled('end_date')) {
+            // Fallback for Today/This Week buttons
+            $start = \Carbon\Carbon::parse($request->start_date, 'Asia/Manila')->startOfDay()->setTimezone('UTC');
+            $end = \Carbon\Carbon::parse($request->end_date, 'Asia/Manila')->endOfDay()->setTimezone('UTC');
+            $query->whereBetween('sale_date', [$start, $end]);
+        }
+
+        $sales = $query->paginate(15)->withQueryString();
         return view('sales.history', compact('sales'));
     }
 }

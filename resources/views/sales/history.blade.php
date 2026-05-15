@@ -1,6 +1,13 @@
 @extends('layouts.app')
 @section('title', 'Sales History / Transactions')
 
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+    .flatpickr-input { background-color: white !important; }
+</style>
+@endpush
+
 @section('content')
 
 <!-- PAGE HEADER -->
@@ -30,6 +37,54 @@
         ← Back to Sales
     </a>
 
+</div>
+
+<!-- ADVANCED FILTERS -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 mb-6 overflow-hidden">
+    <div class="p-4 bg-gray-50 border-b border-gray-100">
+        <form action="{{ route('sales.history') }}" method="GET" id="historyFilterForm">
+            <div class="grid grid-cols-12 gap-4">
+                {{-- Search --}}
+                <div class="xl:col-span-4 col-span-12">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Search Transaction</label>
+                    <input type="text" name="search" value="{{ request('search') }}" class="form-control text-sm" placeholder="Search Receipt # or Customer...">
+                </div>
+
+                {{-- Single Calendar Range Picker --}}
+                <div class="xl:col-span-5 col-span-12">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Date Range (Select Start & End)</label>
+                    <div class="flex items-center gap-2">
+                        <div class="relative flex-1">
+                            <input type="text" name="date_range" id="date_range_picker" value="{{ request('date_range') }}" 
+                                   class="form-control text-sm pl-9" placeholder="Select Date Range...">
+                            <div class="absolute left-3 top-2.5 text-gray-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="flex gap-1">
+                            <button type="button" onclick="setHistoryToday()" class="bg-white border border-gray-200 px-3 py-2 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-100 transition shadow-sm">Today</button>
+                            <button type="button" onclick="setHistoryThisWeek()" class="bg-white border border-gray-200 px-3 py-2 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-100 transition shadow-sm">This Week</button>
+                        </div>
+                    </div>
+                    {{-- Hidden inputs for shortcuts --}}
+                    <input type="hidden" name="start_date" id="h_start_date">
+                    <input type="hidden" name="end_date" id="h_end_date">
+                </div>
+
+                {{-- Reset --}}
+                <div class="xl:col-span-3 col-span-12 flex items-end">
+                    <a href="{{ route('sales.history') }}" class="bg-white border border-gray-200 text-gray-500 px-4 py-2 rounded-lg hover:bg-gray-50 transition flex items-center gap-2 text-sm font-medium w-full justify-center shadow-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Reset History
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
 </div>
 
 <!-- SUMMARY CARDS -->
@@ -226,7 +281,51 @@
 
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
+// Initialize Flatpickr Range
+flatpickr("#date_range_picker", {
+    mode: "range",
+    dateFormat: "Y-m-d",
+    onClose: function(selectedDates, dateStr, instance) {
+        if (selectedDates.length === 2) {
+            document.getElementById('historyFilterForm').submit();
+        }
+    }
+});
+
+function getLocalDate() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function setHistoryToday() {
+    const today = getLocalDate();
+    document.getElementById('h_start_date').value = today;
+    document.getElementById('h_end_date').value = today;
+    document.getElementById('historyFilterForm').submit();
+}
+
+function setHistoryThisWeek() {
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+    const mondayDate = new Date(now.setDate(diff));
+    
+    const start = mondayDate.getFullYear() + '-' + 
+                  String(mondayDate.getMonth() + 1).padStart(2, '0') + '-' + 
+                  String(mondayDate.getDate()).padStart(2, '0');
+    
+    const end = getLocalDate();
+
+    document.getElementById('h_start_date').value = start;
+    document.getElementById('h_end_date').value = end;
+    document.getElementById('historyFilterForm').submit();
+}
+
 function viewReceipt(saleId, receiptNumber, btn) {
     // Show loading state on button
     const originalText = btn.innerHTML;
