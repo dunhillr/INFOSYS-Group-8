@@ -3,8 +3,8 @@
     <a href="{{ route('dashboard') }}" class="header-logo flex items-center px-4 py-3 gap-2">
 
         <!-- LOGO -->
-        <img src="{{ asset('images/logo.png') }}" 
-             alt="logo" 
+        <img src="{{ asset('images/logo.png') }}"
+             alt="logo"
              class="h-8 w-8 object-contain">
 
         <!-- BRAND NAME -->
@@ -22,9 +22,25 @@
 
         <ul class="main-menu space-y-1 px-2 py-3">
 
+            <!-- ── ROLE BADGE ── -->
+            <li class="px-4 py-2 mb-1">
+                <div class="flex items-center gap-2">
+                    @php $role = auth()->user()->user_type; @endphp
+                    @if($role === 'owner')
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700">
+                            <i class="bx bx-crown text-xs"></i> Owner / Admin
+                        </span>
+                    @elseif($role === 'employee')
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700">
+                            <i class="bx bx-user text-xs"></i> Staff
+                        </span>
+                    @endif
+                </div>
+            </li>
+
             <!-- DASHBOARD -->
             <li>
-                <a href="{{ route('dashboard') }}" 
+                <a href="{{ route('dashboard') }}"
                    class="flex items-center gap-3 px-4 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">
                     <i class="bx bx-home text-lg text-blue-500"></i>
                     <span>Dashboard</span>
@@ -33,7 +49,7 @@
 
             <!-- PRODUCTS -->
             <li>
-                <a href="{{ route('products.index') }}" 
+                <a href="{{ route('products.index') }}"
                    class="flex items-center gap-3 px-4 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">
                     <i class="bx bx-box text-lg text-blue-500"></i>
                     <span>Products</span>
@@ -42,7 +58,7 @@
 
             <!-- CUSTOMERS -->
             <li>
-                <a href="{{ route('customers.index') }}" 
+                <a href="{{ route('customers.index') }}"
                    class="flex items-center gap-3 px-4 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">
                     <i class="bx bx-group text-lg text-blue-500"></i>
                     <span>Customers</span>
@@ -51,7 +67,7 @@
 
             <!-- PRODUCTIONS -->
             <li>
-                <a href="{{ route('productions.index') }}" 
+                <a href="{{ route('productions.index') }}"
                    class="flex items-center gap-3 px-4 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">
                     <i class="bx bx-cog text-lg text-blue-500"></i>
                     <span>Productions</span>
@@ -60,7 +76,7 @@
 
             <!-- SALES -->
             <li>
-                <a href="{{ route('sales.index') }}" 
+                <a href="{{ route('sales.index') }}"
                    class="flex items-center gap-3 px-4 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">
                     <i class="bx bx-cart text-lg text-blue-500"></i>
                     <span>Sales</span>
@@ -69,7 +85,7 @@
 
             <!-- SALES HISTORY -->
             <li>
-                <a href="{{ route('sales.history') }}" 
+                <a href="{{ route('sales.history') }}"
                    class="flex items-center gap-3 px-4 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition ml-2">
                     <i class="bx bx-history text-lg text-blue-500"></i>
                     <span>Sales History</span>
@@ -78,7 +94,7 @@
 
             <!-- VEHICLES -->
             <li>
-                <a href="{{ route('vehicles.index') }}" 
+                <a href="{{ route('vehicles.index') }}"
                    class="flex items-center gap-3 px-4 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">
                     <i class="bx bx-car text-lg text-blue-500"></i>
                     <span>Vehicles</span>
@@ -89,7 +105,7 @@
                 $unreadDeliveries = \App\Models\Delivery::where('is_opened', false)->count();
             @endphp
             <li>
-                <a href="{{ route('deliveries.index') }}" 
+                <a href="{{ route('deliveries.index') }}"
                    class="flex items-center gap-3 px-4 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">
                     <div class="relative">
                         <i class="bx bx-truck text-lg text-blue-500"></i>
@@ -109,7 +125,7 @@
                 $hasUnread = \App\Models\SystemNotification::where('user_id', auth()->id())->where('is_read', false)->exists();
             @endphp
             <li>
-                <a href="{{ route('notifications.index') }}" 
+                <a href="{{ route('notifications.index') }}"
                    class="flex items-center gap-3 px-4 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">
                     <div class="relative">
                         <i class="bx bx-bell text-lg text-blue-500"></i>
@@ -123,7 +139,7 @@
 
             <!-- REPORTS -->
             <li>
-                <a href="{{ route('reports.index') }}" 
+                <a href="{{ route('reports.index') }}"
                    class="flex items-center gap-3 px-4 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">
                     <i class="bx bx-bar-chart-alt-2 text-lg text-blue-500"></i>
                     <span>Reports</span>
@@ -135,17 +151,17 @@
 
             <li class="mt-3 border-t pt-3">
 
-                <a href="{{ route('users.index') }}" 
+                <a href="{{ route('users.index') }}"
                    class="flex items-center gap-3 px-4 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">
-                    <i class="bx bx-user text-lg text-blue-500"></i>
-                    <span>Users</span>
+                    <i class="bx bx-user-plus text-lg text-blue-500"></i>
+                    <span>User Management</span>
                 </a>
 
             </li>
 
             <li>
 
-                <a href="{{ route('reports.activity') }}" 
+                <a href="{{ route('reports.activity') }}"
                    class="flex items-center gap-3 px-4 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">
                     <i class="bx bx-history text-lg text-blue-500"></i>
                     <span>Activity Logs</span>
