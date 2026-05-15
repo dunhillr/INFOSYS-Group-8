@@ -133,6 +133,7 @@
                             Edit
                         </a>
 
+                        @if(auth()->user()->user_type === 'owner')
                         <form action="{{ route('productions.destroy', $production) }}" 
                               method="POST" 
                               onsubmit="return confirm('Delete this production record?')">
@@ -143,6 +144,7 @@
                                 Delete
                             </button>
                         </form>
+                        @endif
 
                     </td>
 

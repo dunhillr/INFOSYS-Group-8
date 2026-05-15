@@ -226,6 +226,7 @@
                             Edit
                         </a>
 
+                        @if(auth()->user()->user_type === 'owner')
                         <form action="{{ route('sales.destroy', $sale) }}" 
                               method="POST" 
                               onsubmit="return confirm('Delete this sale record?')">
@@ -236,6 +237,7 @@
                                 Delete
                             </button>
                         </form>
+                        @endif
 
                     </td>
 
