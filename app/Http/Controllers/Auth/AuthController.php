@@ -35,7 +35,12 @@ class AuthController extends Controller
 
         ActivityLogService::log(Auth::id(), 'login', 'auth', 'User logged in.', $request);
 
-        return redirect()->intended(route('dashboard'));
+        // Drivers go to their mobile portal, everyone else to the dashboard
+        $intended = Auth::user()->isDriver()
+            ? route('driver.index')
+            : route('dashboard');
+
+        return redirect()->intended($intended);
     }
 
     public function logout(Request $request): RedirectResponse
