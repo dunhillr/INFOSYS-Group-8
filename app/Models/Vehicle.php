@@ -17,4 +17,5 @@ class Vehicle extends Model
     }
 
     public function deliveries(){ return $this->hasMany(Delivery::class); }
+    public function sales(){ return $this->hasMany(Sale::class); }
 }
