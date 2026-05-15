@@ -1,6 +1,13 @@
 @extends('layouts.app')
 @section('title', 'Sales')
 
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+    .flatpickr-input { background-color: white !important; }
+</style>
+@endpush
+
 @section('content')
 
 <!-- PAGE HEADER -->
@@ -42,29 +49,106 @@
 
     <!-- FILTERS -->
     <div class="p-5 bg-gray-50 border-b border-gray-100">
-        <form action="{{ route('sales.index') }}" method="GET" class="grid grid-cols-12 gap-4">
-            <div class="xl:col-span-4 col-span-12">
-                <label class="text-xs font-bold text-gray-500 uppercase mb-1 block">Search</label>
-                <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="Search Sale No. or Customer Name...">
-            </div>
-            <div class="xl:col-span-3 col-span-12">
-                <label class="text-xs font-bold text-gray-500 uppercase mb-1 block">Start Date</label>
-                <input type="date" name="start_date" value="{{ request('start_date') }}" class="form-control">
-            </div>
-            <div class="xl:col-span-3 col-span-12">
-                <label class="text-xs font-bold text-gray-500 uppercase mb-1 block">End Date</label>
-                <input type="date" name="end_date" value="{{ request('end_date') }}" class="form-control">
-            </div>
-            <div class="xl:col-span-2 col-span-12 flex items-end gap-2">
-                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex-1">
-                    Filter
-                </button>
-                <a href="{{ route('sales.index') }}" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition" title="Reset Filters">
-                    Reset
-                </a>
+        <form action="{{ route('sales.index') }}" method="GET" id="saleFilterForm">
+            <div class="grid grid-cols-12 gap-4">
+                {{-- Search --}}
+                <div class="xl:col-span-3 col-span-12">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Search</label>
+                    <input type="text" name="search" value="{{ request('search') }}" class="form-control text-sm" placeholder="Sale # or Customer Name...">
+                </div>
+
+                {{-- Payment Status --}}
+                <div class="xl:col-span-2 col-span-12">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Payment</label>
+                    <select name="payment_status" class="form-control text-sm" onchange="this.form.submit()">
+                        <option value="">All Payments</option>
+                        <option value="paid" @selected(request('payment_status') == 'paid')>Paid</option>
+                        <option value="partial" @selected(request('payment_status') == 'partial')>Partial</option>
+                        <option value="unpaid" @selected(request('payment_status') == 'unpaid')>Unpaid</option>
+                    </select>
+                </div>
+
+                {{-- Single Calendar Date Range --}}
+                <div class="xl:col-span-4 col-span-12">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Date Range (Select Start & End)</label>
+                    <div class="flex items-center gap-2">
+                        <div class="relative flex-1">
+                            <input type="text" name="date_range" id="sale_date_range" value="{{ request('date_range') }}" 
+                                   class="form-control text-sm pl-9" placeholder="Select Date Range...">
+                            <div class="absolute left-3 top-2.5 text-gray-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="flex gap-1">
+                            <button type="button" onclick="setSaleToday()" class="bg-white border border-gray-200 px-2 py-2 rounded text-xs font-bold text-gray-600 hover:bg-gray-100 transition shadow-sm">Today</button>
+                            <button type="button" onclick="setSaleThisWeek()" class="bg-white border border-gray-200 px-2 py-2 rounded text-xs font-bold text-gray-600 hover:bg-gray-100 transition shadow-sm">This Week</button>
+                        </div>
+                    </div>
+                    {{-- Hidden inputs for shortcuts --}}
+                    <input type="hidden" name="start_date" id="sale_start_date">
+                    <input type="hidden" name="end_date" id="sale_end_date">
+                </div>
+
+                {{-- Reset --}}
+                <div class="xl:col-span-3 col-span-12 flex items-start mt-5">
+                    <a href="{{ route('sales.index') }}" class="bg-white border border-gray-200 text-gray-500 px-4 py-2 rounded-lg hover:bg-gray-50 transition flex items-center gap-2 text-sm font-medium w-full justify-center shadow-sm" title="Reset Filters">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Reset Filters
+                    </a>
+                </div>
             </div>
         </form>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script>
+    // Initialize Flatpickr Range
+    flatpickr("#sale_date_range", {
+        mode: "range",
+        dateFormat: "Y-m-d",
+        onClose: function(selectedDates, dateStr, instance) {
+            if (selectedDates.length === 2) {
+                document.getElementById('saleFilterForm').submit();
+            }
+        }
+    });
+
+    function getLocalDate() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    function setSaleToday() {
+        const today = getLocalDate();
+        document.getElementById('sale_start_date').value = today;
+        document.getElementById('sale_end_date').value = today;
+        document.getElementById('saleFilterForm').submit();
+    }
+
+    function setSaleThisWeek() {
+        const now = new Date();
+        const dayOfWeek = now.getDay();
+        const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+        const monday = new Date(now.setDate(diff));
+        
+        const start = monday.getFullYear() + '-' + 
+                      String(monday.getMonth() + 1).padStart(2, '0') + '-' + 
+                      String(monday.getDate()).padStart(2, '0');
+        
+        const end = getLocalDate();
+
+        document.getElementById('sale_start_date').value = start;
+        document.getElementById('sale_end_date').value = end;
+        document.getElementById('saleFilterForm').submit();
+    }
+    </script>
 
     <!-- TABLE -->
     <div class="p-5 overflow-auto">
@@ -142,6 +226,7 @@
                             Edit
                         </a>
 
+                        @if(auth()->user()->user_type === 'owner')
                         <form action="{{ route('sales.destroy', $sale) }}" 
                               method="POST" 
                               onsubmit="return confirm('Delete this sale record?')">
@@ -152,6 +237,7 @@
                                 Delete
                             </button>
                         </form>
+                        @endif
 
                     </td>
 
