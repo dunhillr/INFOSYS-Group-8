@@ -21,7 +21,7 @@ class UpdateUserRequest extends FormRequest
             'username' => ['required', 'string', 'max:255', Rule::unique('users', 'username')->ignore($userId)],
             'email' => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
             'password' => ['nullable', 'string', 'min:8'],
-            'user_type' => ['required', Rule::in(['owner', 'employee'])],
+            'user_type' => ['required', Rule::in(['owner', 'employee', 'driver'])],
             'is_active' => ['nullable', 'boolean'],
         ];
     }
