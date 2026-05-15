@@ -48,6 +48,17 @@
                         {{ $delivery->delivery_date?->format('M d, Y') }} at {{ \Carbon\Carbon::parse($delivery->delivery_time)->format('h:i A') }}
                     </p>
                 </div>
+                @if($delivery->proof_of_delivery)
+                <div class="mt-4 pt-4 border-t border-gray-100">
+                    <label class="text-xs text-gray-400 uppercase font-semibold mb-2 block">Proof of Delivery</label>
+                    <div class="rounded-lg overflow-hidden border border-gray-200 shadow-sm">
+                        <img src="{{ asset('storage/' . $delivery->proof_of_delivery) }}" 
+                             alt="Proof of Delivery" 
+                             class="w-full h-auto cursor-pointer hover:opacity-90 transition"
+                             onclick="window.open(this.src, '_blank')">
+                    </div>
+                </div>
+                @endif
             </div>
         </div>
     </div>
