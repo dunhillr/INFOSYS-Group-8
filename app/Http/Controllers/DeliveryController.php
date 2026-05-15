@@ -8,6 +8,7 @@ use App\Models\Customer;
 use App\Models\Delivery;
 use App\Models\Sale;
 use App\Models\SystemNotification;
+use App\Models\User;
 use App\Models\Vehicle;
 use App\Services\ActivityLogService;
 use Illuminate\Http\RedirectResponse;
@@ -19,7 +20,7 @@ class DeliveryController extends Controller
 {
     public function index(Request $request): View
     {
-        $query = Delivery::with(['sale.saleItems.product', 'customer', 'vehicle', 'assigner', 'deliverer', 'logs'])->latest();
+        $query = Delivery::with(['sale.saleItems.product', 'customer', 'vehicle', 'driver', 'assigner', 'deliverer', 'logs'])->latest();
 
         // Broad Search
         if ($request->filled('search')) {
@@ -34,6 +35,9 @@ class DeliveryController extends Controller
                 ->orWhereHas('vehicle', function($vq) use ($search) {
                     $vq->where('plate_number', 'like', "%{$search}%")
                        ->orWhere('vehicle_name', 'like', "%{$search}%");
+                })
+                ->orWhereHas('driver', function($dq) use ($search) {
+                    $dq->where('name', 'like', "%{$search}%");
                 })
                 ->orWhere('destination', 'like', "%{$search}%");
             });
@@ -54,31 +58,31 @@ class DeliveryController extends Controller
             $dates = explode(' to ', $request->date_range);
             if (count($dates) == 2) {
                 $start = \Carbon\Carbon::parse($dates[0], 'Asia/Manila')->startOfDay()->setTimezone('UTC');
-                $end = \Carbon\Carbon::parse($dates[1], 'Asia/Manila')->endOfDay()->setTimezone('UTC');
+                $end   = \Carbon\Carbon::parse($dates[1], 'Asia/Manila')->endOfDay()->setTimezone('UTC');
                 $query->whereBetween('delivery_date', [$start, $end]);
             } else {
                 $date = \Carbon\Carbon::parse($dates[0], 'Asia/Manila')->startOfDay()->setTimezone('UTC');
                 $query->whereDate('delivery_date', $date);
             }
         } elseif ($request->filled('start_date') && $request->filled('end_date')) {
-            // Fallback for shortcut buttons
             $start = \Carbon\Carbon::parse($request->start_date, 'Asia/Manila')->startOfDay()->setTimezone('UTC');
-            $end = \Carbon\Carbon::parse($request->end_date, 'Asia/Manila')->endOfDay()->setTimezone('UTC');
+            $end   = \Carbon\Carbon::parse($request->end_date, 'Asia/Manila')->endOfDay()->setTimezone('UTC');
             $query->whereBetween('delivery_date', [$start, $end]);
         }
 
         $deliveries = $query->paginate(10)->withQueryString();
-        $vehicles   = \App\Models\Vehicle::orderBy('vehicle_name')->get();
-        
+        $vehicles   = Vehicle::orderBy('vehicle_name')->get();
+
         return view('deliveries.index', compact('deliveries', 'vehicles'));
     }
 
     public function create(): View
     {
-        $sales = Sale::with('customer')->where('sale_type', 'wholesale')->latest()->get();
+        $sales    = Sale::with('customer')->where('sale_type', 'wholesale')->latest()->get();
         $customers = Customer::orderBy('customer_name')->get();
-        $vehicles = Vehicle::orderBy('vehicle_name')->get();
-        return view('deliveries.create', compact('sales', 'customers', 'vehicles'));
+        $vehicles  = Vehicle::orderBy('vehicle_name')->get();
+        $drivers   = User::where('user_type', 'driver')->where('is_active', true)->orderBy('name')->get();
+        return view('deliveries.create', compact('sales', 'customers', 'vehicles', 'drivers'));
     }
 
     public function store(StoreDeliveryRequest $request): RedirectResponse
@@ -114,22 +118,23 @@ class DeliveryController extends Controller
         if (!$delivery->is_opened) {
             $delivery->update(['is_opened' => true]);
         }
-        
+
         $delivery->load('logs');
-        $sales = Sale::with('customer')->where('sale_type', 'wholesale')->latest()->get();
+        $sales     = Sale::with('customer')->where('sale_type', 'wholesale')->latest()->get();
         $customers = Customer::orderBy('customer_name')->get();
-        $vehicles = Vehicle::orderBy('vehicle_name')->get();
-        return view('deliveries.edit', compact('delivery', 'sales', 'customers', 'vehicles'));
+        $vehicles  = Vehicle::orderBy('vehicle_name')->get();
+        $drivers   = User::where('user_type', 'driver')->where('is_active', true)->orderBy('name')->get();
+        return view('deliveries.edit', compact('delivery', 'sales', 'customers', 'vehicles', 'drivers'));
     }
 
     public function update(UpdateDeliveryRequest $request, Delivery $delivery): RedirectResponse
     {
-        $data = $request->validated();
+        $data      = $request->validated();
         $oldStatus = $delivery->status;
 
         $delivery->update([
-            'status' => $data['status'],
-            'notes' => $data['notes'],
+            'status'       => $data['status'],
+            'notes'        => $data['notes'],
             'delivered_by' => $data['status'] === 'delivered' ? Auth::id() : $delivery->delivered_by,
         ]);
 
@@ -137,7 +142,7 @@ class DeliveryController extends Controller
         if ($oldStatus !== $data['status'] || !empty($data['notes'])) {
             $delivery->logs()->create([
                 'status' => $data['status'],
-                'notes' => $data['notes'],
+                'notes'  => $data['notes'],
             ]);
         }
 
@@ -150,14 +155,7 @@ class DeliveryController extends Controller
                 'Delivery #'.$delivery->id.' status changed to '.$data['status'].'.'
             );
 
-            // Update vehicle status based on delivery transition
-            if ($delivery->vehicle_id) {
-                if ($data['status'] === 'out_for_delivery') {
-                    $delivery->vehicle->update(['status' => 'in_transit']);
-                } elseif (in_array($data['status'], ['delivered', 'cancelled'])) {
-                    $delivery->vehicle->update(['status' => 'available']);
-                }
-            }
+            $this->syncVehicleStatus($delivery, $data['status']);
         }
 
         return redirect()->route('deliveries.index')->with('success', 'Delivery updated successfully.');
@@ -165,24 +163,36 @@ class DeliveryController extends Controller
 
     public function updateStatus(Request $request, Delivery $delivery): RedirectResponse
     {
-        $status = $request->validate([
-            'status' => ['required', 'in:pending,out_for_delivery,delivered,cancelled'],
-        ])['status'];
-
-        $oldStatus = $delivery->status;
-
-        $delivery->update([
-            'status'       => $status,
-            'delivered_by' => $status === 'delivered' ? Auth::id() : $delivery->delivered_by,
+        $validated = $request->validate([
+            'status'           => ['required', 'in:pending,out_for_delivery,delivered,cancelled'],
+            'proof_of_delivery'=> ['nullable', 'image', 'max:5120'],
+            'notes'            => ['nullable', 'string'],
         ]);
 
+        $status    = $validated['status'];
+        $oldStatus = $delivery->status;
+
+        $updateData = [
+            'status'       => $status,
+            'delivered_by' => $status === 'delivered' ? Auth::id() : $delivery->delivered_by,
+        ];
+
+        // Handle Proof of Delivery upload
+        if ($request->hasFile('proof_of_delivery')) {
+            $path = $request->file('proof_of_delivery')->store('proof_of_delivery', 'public');
+            $updateData['proof_of_delivery'] = $path;
+        }
+
+        $delivery->update($updateData);
+
         if ($oldStatus !== $status) {
+            $logNote = $validated['notes'] ?? 'Status updated via quick action.';
             $delivery->logs()->create([
                 'status' => $status,
-                'notes'  => 'Status updated via quick action.',
+                'notes'  => $logNote,
             ]);
 
-            ActivityLogService::log(Auth::id(), 'update', 'deliveries', 'Quick updated status of delivery #'.$delivery->id.' to '.$status, $request);
+            ActivityLogService::log(Auth::id(), 'update', 'deliveries', 'Updated status of delivery #'.$delivery->id.' to '.$status, $request);
 
             SystemNotification::notifyUsers(
                 'delivery_update',
@@ -190,14 +200,7 @@ class DeliveryController extends Controller
                 'Delivery #'.$delivery->id.' status changed to '.$status.'.'
             );
 
-            // Update vehicle status based on delivery transition
-            if ($delivery->vehicle_id) {
-                if ($status === 'out_for_delivery') {
-                    $delivery->vehicle->update(['status' => 'in_transit']);
-                } elseif (in_array($status, ['delivered', 'cancelled'])) {
-                    $delivery->vehicle->update(['status' => 'available']);
-                }
-            }
+            $this->syncVehicleStatus($delivery, $status);
         }
 
         return back()->with('success', 'Delivery status updated successfully.');
@@ -208,5 +211,18 @@ class DeliveryController extends Controller
         $delivery->delete();
         ActivityLogService::log(Auth::id(), 'delete', 'deliveries', 'Deleted delivery #'.$delivery->id, $request);
         return redirect()->route('deliveries.index')->with('success', 'Delivery deleted successfully.');
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private function syncVehicleStatus(Delivery $delivery, string $newStatus): void
+    {
+        if (! $delivery->vehicle_id) return;
+
+        if ($newStatus === 'out_for_delivery') {
+            $delivery->vehicle->update(['status' => 'in_transit']);
+        } elseif (in_array($newStatus, ['delivered', 'cancelled'])) {
+            $delivery->vehicle->update(['status' => 'available']);
+        }
     }
 }
