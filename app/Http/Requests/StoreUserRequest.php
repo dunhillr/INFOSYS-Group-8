@@ -19,7 +19,7 @@ class StoreUserRequest extends FormRequest
             'username' => ['required', 'string', 'max:255', 'unique:users,username'],
             'email' => ['nullable', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
-            'user_type' => ['required', Rule::in(['owner', 'employee'])],
+            'user_type' => ['required', Rule::in(['owner', 'employee', 'driver'])],
             'is_active' => ['nullable', 'boolean'],
         ];
     }
