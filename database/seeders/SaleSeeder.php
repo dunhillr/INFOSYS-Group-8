@@ -111,7 +111,8 @@ class SaleSeeder extends Seeder
                         'sale',
                         $saleRecord->id,
                         $saleRecord->user_id,
-                        'Seeded sale'
+                        'Seeded sale',
+                        $saleRecord->product_id
                     );
                 } catch (\RuntimeException $e) {
                     // If stock is insufficient, just log it
