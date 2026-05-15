@@ -11,15 +11,33 @@ use RuntimeException;
 
 class InventoryService
 {
-    public function getMainInventory(): Inventory
+    /**
+     * Get inventory for a specific product, or the global inventory if no product specified.
+     */
+    public function getInventoryForProduct(?int $productId = null): Inventory
     {
+        if ($productId) {
+            return Inventory::firstOrCreate(
+                ['product_id' => $productId],
+                ['current_stock' => 0, 'low_stock_threshold' => 100]
+            );
+        }
+
         return Inventory::firstOrCreate([], ['current_stock' => 0, 'low_stock_threshold' => 100]);
     }
 
-    public function addStock(float $quantity, string $referenceType, int $referenceId, ?int $userId = null, ?string $remarks = null): Inventory
+    /**
+     * Backward-compatible alias.
+     */
+    public function getMainInventory(): Inventory
     {
-        return DB::transaction(function () use ($quantity, $referenceType, $referenceId, $userId, $remarks) {
-            $inventory = $this->getMainInventory();
+        return $this->getInventoryForProduct();
+    }
+
+    public function addStock(float $quantity, string $referenceType, int $referenceId, ?int $userId = null, ?string $remarks = null, ?int $productId = null): Inventory
+    {
+        return DB::transaction(function () use ($quantity, $referenceType, $referenceId, $userId, $remarks, $productId) {
+            $inventory = $this->getInventoryForProduct($productId);
             $before = (float) $inventory->current_stock;
             $after = $before + $quantity;
 
@@ -43,14 +61,15 @@ class InventoryService
         });
     }
 
-    public function deductStock(float $quantity, string $referenceType, int $referenceId, ?int $userId = null, ?string $remarks = null): Inventory
+    public function deductStock(float $quantity, string $referenceType, int $referenceId, ?int $userId = null, ?string $remarks = null, ?int $productId = null): Inventory
     {
-        return DB::transaction(function () use ($quantity, $referenceType, $referenceId, $userId, $remarks) {
-            $inventory = $this->getMainInventory();
+        return DB::transaction(function () use ($quantity, $referenceType, $referenceId, $userId, $remarks, $productId) {
+            $inventory = $this->getInventoryForProduct($productId);
             $before = (float) $inventory->current_stock;
 
             if ($quantity > $before) {
-                throw new RuntimeException('Insufficient stock.');
+                $productName = $inventory->product?->product_name ?? 'Ice';
+                throw new RuntimeException("Insufficient stock for {$productName}. Available: {$before}, Requested: {$quantity}");
             }
 
             $after = $before - $quantity;
@@ -81,13 +100,12 @@ class InventoryService
             return;
         }
 
-        foreach (User::query()->where('user_type', 'owner')->get() as $owner) {
-            SystemNotification::create([
-                'user_id' => $owner->id,
-                'type' => 'low_stock',
-                'title' => 'Low Stock Alert',
-                'message' => 'Inventory is below the low stock threshold. Current stock: '.$inventory->current_stock,
-            ]);
-        }
+        $productName = $inventory->product?->product_name ?? 'Ice';
+
+        SystemNotification::notifyUsers(
+            'low_stock',
+            'Low Stock Alert',
+            "{$productName} inventory is below the low stock threshold. Current stock: {$inventory->current_stock}"
+        );
     }
 }
