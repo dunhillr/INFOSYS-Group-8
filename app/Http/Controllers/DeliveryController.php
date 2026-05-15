@@ -19,11 +19,11 @@ class DeliveryController extends Controller
 {
     public function index(Request $request): View
     {
-        $query = Delivery::with(['sale', 'customer', 'vehicle', 'assigner', 'deliverer', 'logs'])->latest();
+        $query = Delivery::with(['sale.saleItems.product', 'customer', 'vehicle', 'assigner', 'deliverer', 'logs'])->latest();
 
-        // Search by Customer Name or Sale Number
+        // Broad Search
         if ($request->filled('search')) {
-            $search = $request->search;
+            $search = trim($request->search);
             $query->where(function($q) use ($search) {
                 $q->whereHas('sale', function($sq) use ($search) {
                     $sq->where('sale_number', 'like', "%{$search}%");
@@ -31,20 +31,46 @@ class DeliveryController extends Controller
                 ->orWhereHas('customer', function($cq) use ($search) {
                     $cq->where('customer_name', 'like', "%{$search}%");
                 })
+                ->orWhereHas('vehicle', function($vq) use ($search) {
+                    $vq->where('plate_number', 'like', "%{$search}%")
+                       ->orWhere('vehicle_name', 'like', "%{$search}%");
+                })
                 ->orWhere('destination', 'like', "%{$search}%");
             });
         }
 
-        // Filter by Date Range (using delivery_date)
-        if ($request->filled('start_date')) {
-            $query->whereDate('delivery_date', '>=', $request->start_date);
+        // Filter by Status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
         }
-        if ($request->filled('end_date')) {
-            $query->whereDate('delivery_date', '<=', $request->end_date);
+
+        // Filter by Vehicle
+        if ($request->filled('vehicle_id')) {
+            $query->where('vehicle_id', $request->vehicle_id);
+        }
+
+        // Date Range Filter (Supports Flatpickr Range)
+        if ($request->filled('date_range')) {
+            $dates = explode(' to ', $request->date_range);
+            if (count($dates) == 2) {
+                $start = \Carbon\Carbon::parse($dates[0], 'Asia/Manila')->startOfDay()->setTimezone('UTC');
+                $end = \Carbon\Carbon::parse($dates[1], 'Asia/Manila')->endOfDay()->setTimezone('UTC');
+                $query->whereBetween('delivery_date', [$start, $end]);
+            } else {
+                $date = \Carbon\Carbon::parse($dates[0], 'Asia/Manila')->startOfDay()->setTimezone('UTC');
+                $query->whereDate('delivery_date', $date);
+            }
+        } elseif ($request->filled('start_date') && $request->filled('end_date')) {
+            // Fallback for shortcut buttons
+            $start = \Carbon\Carbon::parse($request->start_date, 'Asia/Manila')->startOfDay()->setTimezone('UTC');
+            $end = \Carbon\Carbon::parse($request->end_date, 'Asia/Manila')->endOfDay()->setTimezone('UTC');
+            $query->whereBetween('delivery_date', [$start, $end]);
         }
 
         $deliveries = $query->paginate(10)->withQueryString();
-        return view('deliveries.index', compact('deliveries'));
+        $vehicles   = \App\Models\Vehicle::orderBy('vehicle_name')->get();
+        
+        return view('deliveries.index', compact('deliveries', 'vehicles'));
     }
 
     public function create(): View
