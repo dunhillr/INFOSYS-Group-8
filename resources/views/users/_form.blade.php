@@ -95,8 +95,9 @@
                 required
             >
                 <option value="" disabled {{ old('user_type', $user->user_type ?? '') === '' ? 'selected' : '' }}>— Select Role —</option>
-                <option value="owner" @selected(old('user_type', $user->user_type ?? 'employee') === 'owner')>Owner</option>
-                <option value="employee" @selected(old('user_type', $user->user_type ?? 'employee') === 'employee')>Employee</option>
+                <option value="owner"    @selected(old('user_type', $user->user_type ?? 'employee') === 'owner')>Owner / Admin</option>
+                <option value="employee" @selected(old('user_type', $user->user_type ?? 'employee') === 'employee')>Staff / Employee</option>
+                <option value="driver"   @selected(old('user_type', $user->user_type ?? 'employee') === 'driver')>Driver</option>
             </select>
         </div>
         @error('user_type')
