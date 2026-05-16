@@ -78,23 +78,8 @@
     @endif
 
     {{-- ── ACTION AREA ── --}}
-    @if($isPending)
-    {{-- START BIYAHE --}}
-    <div class="dp-card" style="padding: 20px; margin-bottom: 12px;">
-        <div style="font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 6px;">🚀 Handa ka na bang umalis?</div>
-        <div style="font-size: 12px; color: #6b7280; margin-bottom: 16px;">
-            Kapag pinindot mo ang button na ito, malalaman ng manager na nasa daan ka na at ang sasakyan ay magiging "In Use."
-        </div>
-        <form method="POST" action="{{ route('driver.start', $delivery) }}">
-            @csrf
-            <button type="submit" class="dp-btn dp-btn-start"
-                onclick="return confirm('I-start na ang biyahe para sa delivery na ito?')">
-                🚀 I-start ang Biyahe
-            </button>
-        </form>
-    </div>
-
-    @elseif($isInTransit)
+    {{-- ── ACTION AREA ── --}}
+    @if($isInTransit)
     {{-- CONFIRM DELIVERY --}}
     <div class="dp-card" style="padding: 20px; margin-bottom: 12px;">
         <div style="font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 6px;">📸 Proof of Delivery</div>
