@@ -124,11 +124,13 @@
         <table class="min-w-full whitespace-nowrap text-sm">
 
             <thead>
+                <tr>
                     <th class="py-3">Date</th>
                     <th>Receipt ID</th>
                     <th>Customer</th>
                     <th>Items</th>
                     <th>Assigned Vehicle</th>
+                    <th>Encoded By</th>
                     <th>Total Amount</th>
                     <th>Payment Status</th>
                     <th width="120">Actions</th>
@@ -158,7 +160,10 @@
 
                     <!-- Customer -->
                     <td class="text-gray-600">
-                        {{ $sale->customer->customer_name ?? 'Walk-in' }}
+                        <div class="font-semibold">{{ $sale->customer->customer_name ?? 'Walk-in' }}</div>
+                        <span class="text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-wider {{ $sale->delivery_type === 'walk_in' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-purple-50 text-purple-600 border border-purple-100' }}">
+                            {{ $sale->delivery_type === 'walk_in' ? '🚶 Walk-In' : '🚚 Delivery' }}
+                        </span>
                     </td>
 
                     <!-- Items -->
@@ -184,6 +189,15 @@
                         @else
                             <span class="text-gray-400 italic">-</span>
                         @endif
+                    </td>
+
+                    <!-- Encoded By -->
+                    <td class="text-gray-600 text-xs font-semibold">
+                        <div class="flex items-center gap-1">
+                            <span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded">
+                                {{ $sale->user->name ?? 'System' }}
+                            </span>
+                        </div>
                     </td>
 
                     <!-- Total Amount -->
