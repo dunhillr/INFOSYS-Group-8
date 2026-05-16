@@ -79,10 +79,14 @@
                     hover:shadow-md transition">
                     <p class="text-xs text-gray-500 uppercase tracking-wide">{{ $inv->product->product_name ?? 'Unknown' }}</p>
                     <h4 class="text-xl font-bold mt-1 
-                        {{ (float) $inv->current_stock <= (float) $inv->low_stock_threshold ? 'text-red-600' : 'text-green-600' }}">
-                        {{ number_format($inv->current_stock, 2) }}
+                        {{ (float) $inv->available <= (float) $inv->low_stock_threshold ? 'text-red-600' : 'text-green-600' }}">
+                        {{ number_format($inv->available, 2) }}
                     </h4>
-                    <p class="text-xs text-gray-400 mt-1">Available</p>
+                    <p class="text-[10px] text-gray-400 mt-1 uppercase tracking-tighter">Available to Sell</p>
+                    <div class="flex justify-between mt-3 pt-2 border-t border-gray-50 text-[10px] text-gray-500">
+                        <span title="Actual bags in freezer">Physical: <b>{{ number_format($inv->current_stock, 0) }}</b></span>
+                        <span title="Committed to pending deliveries" class="text-blue-500">Reserved: <b>{{ number_format($inv->reserved, 0) }}</b></span>
+                    </div>
                 </div>
             </div>
         @endforeach
@@ -168,32 +172,18 @@
                                         {{ ucwords(str_replace('_', ' ', $delivery->status)) }}
                                     </span>
 
-                                    {{-- Dynamic Actions --}}
-                                    <div class="flex gap-1">
-                                        @if($delivery->status === 'pending')
-                                            <form action="{{ route('deliveries.updateStatus', $delivery) }}" method="POST">
-                                                @csrf @method('PATCH')
-                                                <input type="hidden" name="status" value="out_for_delivery">
-                                                <button type="submit" class="bg-blue-600 text-white px-2 py-0.5 rounded text-[10px] font-bold hover:bg-blue-700 transition">
-                                                    Dispatch
+                                    {{-- Quick Actions for Staff/Owner --}}
+                                    <div class="flex gap-1 justify-center">
+                                        <a href="{{ route('deliveries.edit', $delivery) }}" class="text-blue-500 hover:bg-blue-100 p-2 rounded-lg transition" title="View Details">
+                                            <i class="bx bx-show text-lg"></i>
+                                        </a>
+                                        @if(in_array($delivery->status, ['pending', 'out_for_delivery']))
+                                            <form action="{{ route('deliveries.cancel', $delivery) }}" method="POST" onsubmit="return confirm('Sigurado ka bang i-cancel ang delivery na ito? Ibabalik ng system ang yelo sa inventory.')" class="inline">
+                                                @csrf
+                                                <button type="submit" class="text-orange-500 hover:bg-orange-100 p-2 rounded-lg transition" title="Cancel/Failed Delivery">
+                                                    <i class="bx bx-x-circle text-lg"></i>
                                                 </button>
                                             </form>
-                                        @elseif($delivery->status === 'out_for_delivery')
-                                            <form action="{{ route('deliveries.updateStatus', $delivery) }}" method="POST">
-                                                @csrf @method('PATCH')
-                                                <input type="hidden" name="status" value="delivered">
-                                                <button type="submit" class="bg-green-600 text-white px-2 py-0.5 rounded text-[10px] font-bold hover:bg-green-700 transition">
-                                                    Done
-                                                </button>
-                                            </form>
-                                        @else
-                                            {{-- Eye icon for finished deliveries --}}
-                                            <a href="{{ route('deliveries.edit', $delivery) }}" class="text-blue-500 hover:bg-blue-100 p-1 rounded transition" title="View Details">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                </svg>
-                                            </a>
                                         @endif
                                     </div>
                                 </div>
@@ -211,7 +201,7 @@
 <div class="grid grid-cols-12 gap-6 mt-8">
 
     <!-- NOTIFICATIONS -->
-    <div class="xl:col-span-6 col-span-12">
+    <div class="{{ Auth::user()->isOwner() ? 'xl:col-span-6' : 'xl:col-span-12' }} col-span-12">
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">
 
             <!-- HEADER -->
@@ -238,7 +228,8 @@
         </div>
     </div>
 
-    <!-- ACTIVITY LOGS -->
+    <!-- ACTIVITY LOGS (Owner Only) -->
+    @if(Auth::user()->isOwner())
     <div class="xl:col-span-6 col-span-12">
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">
 
@@ -266,6 +257,7 @@
 
         </div>
     </div>
+    @endif
 
 </div>
 

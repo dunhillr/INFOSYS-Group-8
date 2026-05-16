@@ -18,7 +18,13 @@ class DashboardController extends Controller
         // Per-product inventory (available stock per product)
         $inventories = Inventory::with('product')
             ->whereNotNull('product_id')
-            ->get();
+            ->get()
+            ->map(function($inventory) {
+                $service = app(\App\Services\InventoryService::class);
+                $inventory->reserved = $service->getReservedStock($inventory->product_id);
+                $inventory->available = max(0, $inventory->current_stock - $inventory->reserved);
+                return $inventory;
+            });
 
         $todayProduction = Production::query()->whereDate('production_date', now()->toDateString())->sum('quantity_produced');
         $todaySales = Sale::query()->whereDate('sale_date', now()->toDateString())->sum('total_amount');
