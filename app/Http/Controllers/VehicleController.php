@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreVehicleRequest;
 use App\Http\Requests\UpdateVehicleRequest;
+use App\Models\User;
 use App\Models\Vehicle;
 use App\Services\ActivityLogService;
 use Illuminate\Http\RedirectResponse;
@@ -21,7 +22,8 @@ class VehicleController extends Controller
 
     public function create(): View
     {
-        return view('vehicles.create');
+        $drivers = User::where('user_type', 'driver')->where('is_active', true)->orderBy('name')->get();
+        return view('vehicles.create', compact('drivers'));
     }
 
     public function store(StoreVehicleRequest $request): RedirectResponse
@@ -33,7 +35,8 @@ class VehicleController extends Controller
 
     public function edit(Vehicle $vehicle): View
     {
-        return view('vehicles.edit', compact('vehicle'));
+        $drivers = User::where('user_type', 'driver')->where('is_active', true)->orderBy('name')->get();
+        return view('vehicles.edit', compact('vehicle', 'drivers'));
     }
 
     public function update(UpdateVehicleRequest $request, Vehicle $vehicle): RedirectResponse

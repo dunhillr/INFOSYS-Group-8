@@ -51,6 +51,7 @@
                     <th>Plate Number</th>
                     <th>Capacity</th>
                     <th>Status</th>
+                    <th>Assigned Driver</th>
                     <th width="150">Actions</th>
                 </tr>
             </thead>
@@ -87,6 +88,10 @@
                         </span>
                     </td>
 
+                    <td class="text-gray-800 font-semibold">
+                        {{ $vehicle->driver->name ?? 'Unassigned' }}
+                    </td>
+
                     <td class="flex gap-2 py-3">
 
                         <a href="{{ route('vehicles.edit', $vehicle) }}"
@@ -110,7 +115,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="5" class="text-center py-6 text-gray-400">
+                    <td colspan="6" class="text-center py-6 text-gray-400">
                         No vehicles found.
                     </td>
                 </tr>
