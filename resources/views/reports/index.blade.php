@@ -109,28 +109,6 @@
         </div>
     </div>
 
-    <!-- ACTIVITY (OWNER ONLY) -->
-    @if (auth()->user()->user_type === 'owner')
-    <div class="xl:col-span-4 col-span-12">
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition">
-
-            <h5 class="text-lg font-semibold text-gray-800 mb-2">
-                Activity Report
-            </h5>
-
-            <p class="text-sm text-gray-500 mb-4">
-                Owner-only user activity and logs report.
-            </p>
-
-            <a href="{{ route('reports.activity') }}" 
-               class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition inline-block">
-                Open Report
-            </a>
-
-        </div>
-    </div>
-    @endif
-
 </div>
 
 @endsection
