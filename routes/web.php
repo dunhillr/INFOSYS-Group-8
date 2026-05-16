@@ -21,8 +21,9 @@ Route::get('/', function () {
 Route::middleware(['auth', 'role:driver'])->prefix('driver')->name('driver.')->group(function () {
     Route::get('/',                            [DriverPortalController::class, 'index'])->name('index');
     Route::get('/delivery/{delivery}',         [DriverPortalController::class, 'show'])->name('show');
-    Route::post('/delivery/{delivery}/start',  [DriverPortalController::class, 'startDelivery'])->name('start');
+    Route::post('/start-trip',                 [DriverPortalController::class, 'startTrip'])->name('startTrip');
     Route::post('/delivery/{delivery}/confirm',[DriverPortalController::class, 'confirmDelivery'])->name('confirm');
+    Route::get('/history',                     [DriverPortalController::class, 'history'])->name('history');
 });
 
 // ── Admin / Staff Area ─────────────────────────────────────────────────────
@@ -37,6 +38,7 @@ Route::middleware(['auth', 'role:owner,employee'])->group(function () {
     Route::get('/sales-history', [SaleController::class, 'history'])->name('sales.history');
     Route::resource('vehicles', VehicleController::class)->except('show');
     Route::patch('deliveries/{delivery}/status', [DeliveryController::class, 'updateStatus'])->name('deliveries.updateStatus');
+    Route::post('deliveries/{delivery}/cancel', [DeliveryController::class, 'markAsFailed'])->name('deliveries.cancel');
     Route::resource('deliveries', DeliveryController::class)->except('show');
 
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
