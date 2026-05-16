@@ -29,7 +29,20 @@ class SaleController extends Controller
     {
         $query = Sale::with(['saleItems.product', 'customer', 'user', 'vehicle'])->latest();
 
-        // Search Filter
+        // Apply Active Sales Logic: 
+        // 1. Walk-ins that are NOT yet fully paid (Ongoing collections)
+        // 2. OR Deliveries that are Pending or In Transit (Ongoing logistics)
+        $query->where(function($q) {
+            $q->where(function($sub) {
+                $sub->where('delivery_type', 'walk_in')
+                    ->where('payment_status', '!=', 'paid');
+            })
+            ->orWhereHas('delivery', function($sub) {
+                $sub->whereIn('status', ['pending', 'out_for_delivery']);
+            });
+        });
+
+        // Search Filter (Sale # or Customer)
         if ($request->filled('search')) {
             $search = trim($request->search);
             $query->where(function($q) use ($search) {
@@ -63,14 +76,17 @@ class SaleController extends Controller
             $query->whereBetween('sale_date', [$start, $end]);
         }
 
-        $sales = $query->paginate(10)->withQueryString();
+        $sales = $query->paginate(15)->withQueryString();
         return view('sales.index', compact('sales'));
     }
 
     public function create(): View
     {
         $customers   = Customer::orderBy('customer_name')->get();
-        $products    = Product::where('is_active', true)->orderBy('product_name')->get();
+        $products    = Product::where('is_active', true)->orderBy('product_name')->get()->map(function($product) {
+            $product->available_stock = $this->inventoryService->getAvailableStock($product->id);
+            return $product;
+        });
         $inventories = Inventory::whereNotNull('product_id')->get()->keyBy('product_id');
 
         // Fetch vehicles and calculate remaining capacity
@@ -192,7 +208,10 @@ class SaleController extends Controller
                         'subtotal' => $itemSubtotal,
                     ]);
 
-                    $this->inventoryService->deductStock($item['quantity'], 'sale', $sale->id, Auth::id(), 'Sale stock deduction', (int) $item['product_id']);
+                    // Only deduct stock immediately for Walk-In sales
+                    if ($data['delivery_type'] === 'walk_in') {
+                        $this->inventoryService->deductStock($item['quantity'], 'sale', $sale->id, Auth::id(), 'Walk-in sale stock deduction', (int) $item['product_id']);
+                    }
                 }
 
                 // Update vehicle status and auto-create Delivery only for non-walk-in types
@@ -235,9 +254,22 @@ class SaleController extends Controller
 
     public function edit(Sale $sale): View
     {
+        if ($sale->payment_status === 'partial') {
+            return view('sales.collect_payment', compact('sale'));
+        }
+
         $sale->load('saleItems.product');
         $customers   = Customer::orderBy('customer_name')->get();
-        $products    = Product::where('is_active', true)->orderBy('product_name')->get();
+        $products = Product::where('is_active', true)->orderBy('product_name')->get()->map(function($product) use ($sale) {
+            // Get base available stock
+            $available = $this->inventoryService->getAvailableStock($product->id);
+            
+            // If this sale already occupies some of that stock (either reserved or deducted), add it back to "available" for editing purposes
+            $currentSaleQty = $sale->saleItems->where('product_id', $product->id)->sum('quantity');
+            $product->available_stock = $available + $currentSaleQty;
+            
+            return $product;
+        });
         $inventories = Inventory::whereNotNull('product_id')->get()->keyBy('product_id');
 
         // Fetch vehicles and calculate remaining capacity
@@ -261,15 +293,25 @@ class SaleController extends Controller
         return view('sales.edit', compact('sale', 'customers', 'products', 'vehicles', 'inventories'));
     }
 
-    public function update(UpdateSaleRequest $request, Sale $sale): RedirectResponse
+    public function update(Request $request, Sale $sale): RedirectResponse
     {
+        // If coming from the Collect Payment view, handle separately
+        if ($request->has('is_collect_payment')) {
+            return $this->updatePayment($request, $sale);
+        }
+
         try {
             DB::transaction(function () use ($request, $sale) {
-                $data = $request->validated();
+                // Manually validate for standard edits
+                $data = $request->validate((new UpdateSaleRequest())->rules());
                 
-                // Reverse old stock for all old items
-                foreach ($sale->saleItems as $oldItem) {
-                    $this->inventoryService->addStock((float) $oldItem->quantity, 'sale_update_reversal', $sale->id, Auth::id(), 'Reversed previous sale quantity before update', (int) $oldItem->product_id);
+                // Conditional Reverse: Only if stock was actually deducted
+                $wasDeducted = ($sale->delivery_type === 'walk_in' || ($sale->delivery && $sale->delivery->status === 'delivered'));
+                
+                if ($wasDeducted) {
+                    foreach ($sale->saleItems as $oldItem) {
+                        $this->inventoryService->addStock((float) $oldItem->quantity, 'sale_update_reversal', $sale->id, Auth::id(), 'Reversed previous sale quantity before update', (int) $oldItem->product_id);
+                    }
                 }
 
                 $sale->saleItems()->delete();
@@ -347,7 +389,10 @@ class SaleController extends Controller
                         'subtotal' => $itemSubtotal,
                     ]);
 
-                    $this->inventoryService->deductStock($item['quantity'], 'sale_update', $sale->id, Auth::id(), 'Applied updated sale quantity', (int) $item['product_id']);
+                    // Conditional Deduct: Only if walk_in (deliveries deduct on completion)
+                    if ($data['delivery_type'] === 'walk_in') {
+                        $this->inventoryService->deductStock($item['quantity'], 'sale_update', $sale->id, Auth::id(), 'Applied updated walk-in sale quantity', (int) $item['product_id']);
+                    }
                 }
 
                 // Handle vehicle status changes
@@ -375,11 +420,43 @@ class SaleController extends Controller
         return redirect()->route('sales.index')->with('success', 'Sale updated successfully.');
     }
 
+    public function updatePayment(Request $request, Sale $sale): RedirectResponse
+    {
+        $request->validate([
+            'new_payment_amount' => 'required|numeric|min:0.01',
+            'payment_method' => 'required|string',
+        ]);
+
+        $newPayment = (float) $request->new_payment_amount;
+        $totalPaid = (float) $sale->amount_paid + $newPayment;
+        $balance = max(0, (float) $sale->total_amount - $totalPaid);
+        
+        $newStatus = ($balance <= 0) ? 'paid' : 'partial';
+
+        $sale->update([
+            'amount_paid' => $totalPaid,
+            'balance_due' => $balance,
+            'payment_status' => $newStatus,
+            'payment_method' => $request->payment_method, // Update with the latest method used
+        ]);
+
+        ActivityLogService::log(Auth::id(), 'update', 'sales', 'Collected payment ₱'.number_format($newPayment, 2).' for sale #'.$sale->id, $request);
+
+        $msg = ($newStatus === 'paid') ? 'Payment completed! Sale moved to history.' : 'Payment updated. Remaining balance: ₱' . number_format($balance, 2);
+
+        return redirect()->route('sales.index')->with('success', $msg);
+    }
+
     public function destroy(Request $request, Sale $sale): RedirectResponse
     {
         DB::transaction(function () use ($request, $sale) {
-            foreach ($sale->saleItems as $item) {
-                $this->inventoryService->addStock((float) $item->quantity, 'sale_delete_reversal', $sale->id, Auth::id(), 'Deleted sale stock restored', (int) $item->product_id);
+            // Conditional Reverse: Only if stock was actually deducted
+            $wasDeducted = ($sale->delivery_type === 'walk_in' || ($sale->delivery && $sale->delivery->status === 'delivered'));
+
+            if ($wasDeducted) {
+                foreach ($sale->saleItems as $item) {
+                    $this->inventoryService->addStock((float) $item->quantity, 'sale_delete_reversal', $sale->id, Auth::id(), 'Deleted sale stock restored', (int) $item->product_id);
+                }
             }
             
             // Revert vehicle status back to "available" if a vehicle was assigned
@@ -398,6 +475,19 @@ class SaleController extends Controller
     public function history(Request $request): View
     {
         $query = Sale::with(['saleItems.product', 'customer', 'vehicle', 'user'])->latest('sale_date');
+
+        // Apply Archive/History Sales Logic:
+        // 1. Walk-ins that are fully PAID (Finished transactions)
+        // 2. OR Deliveries that are Delivered or Cancelled (Finished logistics)
+        $query->where(function($q) {
+            $q->where(function($sub) {
+                $sub->where('delivery_type', 'walk_in')
+                    ->where('payment_status', 'paid');
+            })
+            ->orWhereHas('delivery', function($sub) {
+                $sub->whereIn('status', ['delivered', 'cancelled']);
+            });
+        });
 
         // Search Filter (Sale # or Customer)
         if ($request->filled('search')) {
