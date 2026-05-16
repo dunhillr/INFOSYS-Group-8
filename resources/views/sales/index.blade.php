@@ -177,7 +177,10 @@
                     </td>
 
                     <td class="text-gray-600">
-                        {{ $sale->customer->customer_name ?? 'Walk-in' }}
+                        <div class="font-semibold">{{ $sale->customer->customer_name ?? 'Walk-in' }}</div>
+                        <span class="text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-wider {{ $sale->delivery_type === 'walk_in' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-purple-50 text-purple-600 border border-purple-100' }}">
+                            {{ $sale->delivery_type === 'walk_in' ? '🚶 Walk-In' : '🚚 Delivery' }}
+                        </span>
                     </td>
 
                     <td class="text-gray-800 text-xs">
@@ -219,33 +222,40 @@
                         {{ $sale->sale_date?->format('M d, Y h:i A') }}
                     </td>
 
-                    <td class="flex gap-2 py-3">
-
-                        <a href="{{ route('sales.edit', $sale) }}"
-                           class="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600">
-                            Edit
-                        </a>
-
-                        @if(auth()->user()->user_type === 'owner')
-                        <form action="{{ route('sales.destroy', $sale) }}" 
-                              method="POST" 
-                              onsubmit="return confirm('Delete this sale record?')">
-                            @csrf 
-                            @method('DELETE')
-
-                            <button class="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600">
-                                Delete
+                    <td class="py-3">
+                        <div class="flex gap-2">
+                            <button 
+                                type="button" 
+                                class="bg-gray-100 text-gray-700 px-3 py-1 rounded text-xs hover:bg-gray-200 transition font-semibold"
+                                onclick="viewReceipt({{ $sale->id }}, '{{ $sale->sale_number }}', this)">
+                                👁️ View
                             </button>
-                        </form>
-                        @endif
 
+                            <a href="{{ route('sales.edit', $sale) }}"
+                               class="bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600 transition font-semibold">
+                                Edit
+                            </a>
+
+                            @if(auth()->user()->user_type === 'owner')
+                            <form action="{{ route('sales.destroy', $sale) }}" 
+                                  method="POST" 
+                                  onsubmit="return confirm('Delete this sale record?')">
+                                @csrf 
+                                @method('DELETE')
+
+                                <button class="bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600 transition font-semibold">
+                                    Delete
+                                </button>
+                            </form>
+                            @endif
+                        </div>
                     </td>
 
                 </tr>
                 @empty
                 <tr>
                     <td colspan="10" class="text-center py-6 text-gray-400">
-                        No sales records found.
+                        No active sales records found today.
                     </td>
                 </tr>
                 @endforelse
@@ -262,5 +272,96 @@
     </div>
 
 </div>
+
+<!-- RECEIPT DETAIL MODAL -->
+<div id="receiptModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-lg shadow-lg max-w-md w-full max-h-[85vh] overflow-y-auto">
+        <!-- Modal Header -->
+        <div class="bg-blue-600 text-white px-4 py-3 flex justify-between items-center sticky top-0">
+            <h3 class="text-base font-bold">Receipt Details</h3>
+            <button onclick="closeReceipt()" class="text-xl leading-none">×</button>
+        </div>
+        <!-- Modal Body -->
+        <div id="receiptContent" class="p-4"></div>
+        <!-- Modal Footer -->
+        <div class="bg-gray-50 px-4 py-2 flex gap-2 justify-end border-t sticky bottom-0">
+            <button onclick="printReceipt()" class="bg-green-600 text-white px-3 py-1 text-sm rounded hover:bg-green-700 transition">🖨️ Print</button>
+            <button onclick="closeReceipt()" class="bg-gray-600 text-white px-3 py-1 text-sm rounded hover:bg-gray-700 transition">Close</button>
+        </div>
+    </div>
+</div>
+
+<script>
+function viewReceipt(saleId, receiptNumber, btn) {
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '...';
+    
+    fetch(`/sales/${saleId}`)
+        .then(response => response.text())
+        .then(html => {
+            const saleData = @json($sales);
+            const sale = saleData.data.find(s => s.id == saleId);
+            
+            let receiptHTML = `
+                <div class="receipt-container text-sm">
+                    <h4 class="text-lg font-bold mb-3 text-center">Receipt #${receiptNumber}</h4>
+                    <div class="grid grid-cols-2 gap-3 mb-4 pb-3 border-b">
+                        <div>
+                            <p class="text-xs text-gray-600 font-semibold uppercase">Date</p>
+                            <p class="font-semibold text-xs">${new Date(sale.sale_date).toLocaleDateString()} ${new Date(sale.sale_date).toLocaleTimeString()}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-600 font-semibold uppercase">ID</p>
+                            <p class="font-semibold text-xs">${receiptNumber}</p>
+                        </div>
+                    </div>
+                    <div class="mb-3 pb-3 border-b">
+                        <p class="text-xs text-gray-600 font-semibold mb-1 uppercase">Customer</p>
+                        <p class="font-semibold text-xs">${sale.customer?.customer_name || 'Walk-in Customer'}</p>
+                    </div>
+                    <div class="mb-3 pb-3 border-b">
+                        <p class="text-xs text-gray-600 font-semibold mb-1 uppercase">Sale Details</p>
+                        <div class="space-y-1 text-xs">
+                            <div class="border rounded p-2 mb-2 bg-gray-50">
+                                ${sale.sale_items.map(item => `
+                                    <div class="flex justify-between mb-1">
+                                        <span>${item.product?.product_name || '-'} (x${parseFloat(item.quantity).toFixed(2)})</span>
+                                        <span class="font-semibold">₱${parseFloat(item.subtotal).toFixed(2)}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Type:</span> <span class="font-semibold">${sale.delivery_type.toUpperCase()}</span>
+                            </div>
+                            ${sale.delivery_fee > 0 ? `<div class="flex justify-between"><span>Fee:</span> <span class="font-semibold">₱${parseFloat(sale.delivery_fee).toFixed(2)}</span></div>` : ''}
+                        </div>
+                    </div>
+                    <div class="mb-3 pb-3 border-b bg-blue-50 p-2 rounded">
+                        <div class="flex justify-between text-sm font-bold">
+                            <span>TOTAL:</span> <span class="text-blue-600">₱${parseFloat(sale.total_amount).toFixed(2)}</span>
+                        </div>
+                    </div>
+                    <div class="text-center text-[10px] text-gray-500 pt-2">
+                        <p>Encoded by: ${sale.user?.name || 'System'}</p>
+                    </div>
+                </div>
+            `;
+            document.getElementById('receiptContent').innerHTML = receiptHTML;
+            document.getElementById('receiptModal').classList.remove('hidden');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        });
+}
+
+function closeReceipt() { document.getElementById('receiptModal').classList.add('hidden'); }
+function printReceipt() {
+    const content = document.getElementById('receiptContent').innerHTML;
+    const printWindow = window.open('', '', 'height=500,width=800');
+    printWindow.document.write('<html><head><title>Receipt</title><style>body { font-family: Arial; margin: 20px; }</style></head><body>' + content + '</body></html>');
+    printWindow.document.close();
+    printWindow.print();
+}
+</script>
 
 @endsection

@@ -26,40 +26,70 @@
     <!-- Vehicle Selection with Availability Indicator -->
     <div class="xl:col-span-6 col-span-12" id="vehicle_field">
         <label class="form-label">Assigned Vehicle <span class="text-gray-500 text-xs">(Optional)</span></label>
-        <select name="vehicle_id" id="vehicle_select" class="form-control">
-            <option value="">-- No Vehicle Assignment --</option>
+        <select name="vehicle_id" id="vehicle_select" class="form-control" required>
+            <option value="">-- Select Vehicle --</option>
             @foreach ($vehicles as $vehicle)
                 @php
-                    $isUnavailable = in_array($vehicle->status, ['in use', 'not available', 'maintenance']);
-                    // If editing, the currently assigned vehicle should not be disabled even if marked 'in use'
+                    $status = strtolower($vehicle->status);
+                    $isDisabled = in_array($status, ['in_transit', 'maintenance']);
+                    
+                    // If editing, the currently assigned vehicle should not be disabled
                     $isCurrentVehicle = isset($sale) && $sale->vehicle_id == $vehicle->id;
                     if ($isCurrentVehicle) {
-                        $isUnavailable = false;
+                        $isDisabled = false;
                     }
-                    $statusIcon = match($vehicle->status) {
-                        'available'     => '✓',
-                        'in use'        => '🔴',
-                        'not available' => '🚫',
-                        'maintenance'   => '🔧',
-                        default         => '?'
+                    
+                    $driverName = $vehicle->driver->name ?? '';
+                    $maxCapacity = (float)($vehicle->capacity ?? 0);
+                    $currentLoad = max(0, $maxCapacity - (float)($vehicle->remaining_capacity ?? 0));
+                    
+                    $statusDisplay = match($status) {
+                        'available'  => '🟢 Available',
+                        'reserved'   => '🔵 Reserved',
+                        'in_transit' => '🚫 In Use (Nasa Byahe)',
+                        'maintenance'=> '🔧 Maintenance',
+                        default      => strtoupper($status)
                     };
+                    
+                    $capacityText = !in_array($status, ['in_transit', 'maintenance']) 
+                                    ? "({$currentLoad}/{$maxCapacity}kg)" 
+                                    : "";
                 @endphp
                 <option
                     value="{{ $vehicle->id }}"
+                    data-driver="{{ $driverName }}"
+                    data-max-capacity="{{ $maxCapacity }}"
+                    data-current-load="{{ $currentLoad }}"
                     @selected(old('vehicle_id', $sale->vehicle_id ?? '') == $vehicle->id)
-                    @disabled($vehicle->remaining_capacity <= 0 && !$isCurrentVehicle)
+                    @disabled($isDisabled)
                 >
-                    {{ $statusIcon }} {{ $vehicle->vehicle_name }} ({{ $vehicle->plate_number }}) 
-                    — Available: {{ number_format($vehicle->remaining_capacity, 2) }} kg
+                    {{ $vehicle->vehicle_name }} ({{ $vehicle->plate_number }}) - {{ $statusDisplay }} {{ $capacityText }}
                 </option>
             @endforeach
         </select>
-        <p class="text-xs text-gray-500 mt-2">
-            <span class="text-green-600">✓ Available</span> •
-            <span class="text-red-600">🔴 In Use</span> •
-            <span class="text-red-700">🚫 Not Available</span> •
-            <span class="text-orange-600">🔧 Maintenance</span>
-        </p>
+
+        <!-- Dynamic Vehicle Info -->
+        <div id="vehicle_info_box" class="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg hidden">
+            <div class="flex items-center gap-2 mb-2 text-sm text-gray-700">
+                <span class="text-lg">👤</span>
+                <span class="font-semibold text-gray-500 uppercase text-[10px] tracking-wider">Assigned Driver:</span>
+                <span id="vehicle_driver_display" class="font-bold text-blue-700"></span>
+            </div>
+            <div class="flex items-center gap-2 text-sm text-gray-700">
+                <span class="text-lg">⚖️</span>
+                <span class="font-semibold text-gray-500 uppercase text-[10px] tracking-wider">Truck Load:</span>
+                <span class="font-bold" id="vehicle_load_display">0.00 kg / 0.00 kg Loaded</span>
+            </div>
+            
+            <!-- Warning block if overloaded -->
+            <div id="capacity_warning" class="mt-2 text-xs text-red-600 font-bold hidden flex items-center gap-1">
+                <span>⚠️</span> Lumagpas sa Max Capacity ng sasakyan!
+            </div>
+            <!-- Warning block if no driver -->
+            <div id="no_driver_warning" class="mt-2 text-xs text-red-600 font-bold hidden flex items-center gap-1">
+                <span>⚠️</span> Paki-assign muna ng driver ang sasakyang ito sa Vehicles Page.
+            </div>
+        </div>
     </div>
 
     <!-- Items Table -->
@@ -147,7 +177,6 @@
         <select name="payment_status" id="payment_status" class="form-control" required>
             <option value="paid" @selected(old('payment_status', $sale->payment_status ?? 'paid') === 'paid')>Paid</option>
             <option value="partial" @selected(old('payment_status', $sale->payment_status ?? '') === 'partial')>Partial</option>
-            <option value="unpaid" @selected(old('payment_status', $sale->payment_status ?? '') === 'unpaid')>Unpaid</option>
         </select>
     </div>
 
@@ -159,7 +188,6 @@
             <option value="Cash" @selected(old('payment_method', $sale->payment_method ?? '') === 'Cash')>Cash</option>
             <option value="GCash" @selected(old('payment_method', $sale->payment_method ?? '') === 'GCash')>GCash</option>
             <option value="Bank Transfer" @selected(old('payment_method', $sale->payment_method ?? '') === 'Bank Transfer')>Bank Transfer</option>
-            <option value="Cheque" @selected(old('payment_method', $sale->payment_method ?? '') === 'Cheque')>Cheque</option>
         </select>
     </div>
 
@@ -345,13 +373,7 @@
             }
         }
 
-        if (initialItems.length > 0) {
-            initialItems.forEach(item => createRow(item));
-        } else {
-            createRow(); // Create at least one empty row
-        }
-
-        addBtn.addEventListener('click', () => createRow());
+        // initialItems and addBtn will be handled at the end of the script
 
         // --- Calculation Logic ---
         const deliveryFeeInput = document.getElementById('delivery_fee_input');
@@ -488,5 +510,114 @@
 
         // Initial calculation
         calculateTotals();
+        
+        // --- Vehicle Dynamic Info & Validation Logic ---
+        const vehicleInfoBox = document.getElementById('vehicle_info_box');
+        const driverDisplay = document.getElementById('vehicle_driver_display');
+        const loadDisplay = document.getElementById('vehicle_load_display');
+        const capacityWarning = document.getElementById('capacity_warning');
+        const noDriverWarning = document.getElementById('no_driver_warning');
+        const form = document.querySelector('form'); // Assume there's only one main form or get the closest one
+        
+        function updateVehicleInfo() {
+            const isWalkIn = deliveryTypeSelect.value === 'walk_in';
+            if (isWalkIn || !vehicleSelect.value) {
+                vehicleInfoBox.classList.add('hidden');
+                vehicleSelect.required = false;
+                return;
+            }
+            
+            vehicleSelect.required = true;
+            vehicleInfoBox.classList.remove('hidden');
+            
+            const selectedOption = vehicleSelect.options[vehicleSelect.selectedIndex];
+            const driver = selectedOption.getAttribute('data-driver');
+            const maxCapacity = parseFloat(selectedOption.getAttribute('data-max-capacity')) || 0;
+            const currentLoad = parseFloat(selectedOption.getAttribute('data-current-load')) || 0;
+            
+            // Get current order weight
+            const orderWeightText = document.getElementById('total_weight_display').textContent;
+            const orderWeight = parseFloat(orderWeightText.replace(/,/g, '')) || 0;
+            
+            const totalLoad = currentLoad + orderWeight;
+            
+            // Update UI
+            driverDisplay.textContent = driver ? driver : 'WALANG DRIVER';
+            if (!driver) {
+                driverDisplay.classList.add('text-red-600');
+                driverDisplay.classList.remove('text-blue-700');
+                noDriverWarning.classList.remove('hidden');
+            } else {
+                driverDisplay.classList.remove('text-red-600');
+                driverDisplay.classList.add('text-blue-700');
+                noDriverWarning.classList.add('hidden');
+            }
+            
+            loadDisplay.textContent = `${totalLoad.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kg / ${maxCapacity.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kg Loaded`;
+            
+            if (totalLoad > maxCapacity) {
+                loadDisplay.classList.add('text-red-600');
+                capacityWarning.classList.remove('hidden');
+            } else {
+                loadDisplay.classList.remove('text-red-600');
+                capacityWarning.classList.add('hidden');
+            }
+        }
+        
+        vehicleSelect.addEventListener('change', updateVehicleInfo);
+        
+        // Overwrite calculateTotals to also update vehicle info (since weight changes)
+        const originalCalculateTotals = calculateTotals;
+        calculateTotals = function() {
+            originalCalculateTotals();
+            updateVehicleInfo();
+        };
+        
+        // --- Final Initialization ---
+        // We do this at the very end to ensure all functions and variables are initialized
+        if (initialItems.length > 0) {
+            initialItems.forEach(item => createRow(item));
+        } else {
+            createRow(); // Create at least one empty row
+        }
+
+        if (addBtn) {
+            addBtn.addEventListener('click', () => createRow());
+        }
+
+        // Run once on load
+        updateVehicleInfo();
+        calculateTotals();
+        
+        // Prevent form submission if validation fails
+        if(form) {
+            form.addEventListener('submit', function(e) {
+                const isWalkIn = deliveryTypeSelect.value === 'walk_in';
+                if(isWalkIn) return; // Skip validation if walk-in
+                
+                const selectedOption = vehicleSelect.options[vehicleSelect.selectedIndex];
+                if(!selectedOption.value) return; // Native HTML5 required will catch this
+                
+                const driver = selectedOption.getAttribute('data-driver');
+                const maxCapacity = parseFloat(selectedOption.getAttribute('data-max-capacity')) || 0;
+                const currentLoad = parseFloat(selectedOption.getAttribute('data-current-load')) || 0;
+                
+                const orderWeightText = document.getElementById('total_weight_display').textContent;
+                const orderWeight = parseFloat(orderWeightText.replace(/,/g, '')) || 0;
+                const totalLoad = currentLoad + orderWeight;
+                
+                if (!driver) {
+                    e.preventDefault();
+                    alert("Paki-assign muna ng driver ang sasakyang ito sa Vehicles Page.");
+                    return false;
+                }
+                
+                if (totalLoad > maxCapacity) {
+                    e.preventDefault();
+                    alert("Overloaded! Lumagpas sa Max Capacity ng sasakyan ang bigat ng yelo. Bawasan ang order o pumili ng ibang sasakyan.");
+                    return false;
+                }
+            });
+        }
     });
 </script>
