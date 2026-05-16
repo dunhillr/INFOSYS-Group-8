@@ -14,8 +14,27 @@ class UpdateDeliveryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'status' => ['required', 'in:pending,out_for_delivery,delivered,cancelled'],
-            'notes' => ['nullable', 'string'],
+            'vehicle_id'    => ['nullable', 'exists:vehicles,id'],
+            'destination'   => ['required', 'string', 'max:255'],
+            'delivery_date' => ['required', 'date'],
+            'delivery_time' => ['required'],
+            'status'        => ['required', 'in:pending,out_for_delivery,delivered,cancelled'],
+            'notes'         => ['nullable', 'string'],
         ];
+    }
+
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            if ($this->vehicle_id) {
+                $vehicle = \App\Models\Vehicle::find($this->vehicle_id);
+                if ($vehicle && !$vehicle->assigned_driver_id) {
+                    $validator->errors()->add(
+                        'vehicle_id', 
+                        '⚠️ Ang sasakyang ito ay walang nakatalagang driver ngayon. Mangyaring mag-assign muna sa Vehicles Page.'
+                    );
+                }
+            }
+        });
     }
 }
