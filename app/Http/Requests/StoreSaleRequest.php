@@ -34,4 +34,57 @@ class StoreSaleRequest extends FormRequest
             'notes'           => ['nullable', 'string'],
         ];
     }
+
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            if ($this->delivery_type === 'delivery' && $this->vehicle_id) {
+                $vehicle = \App\Models\Vehicle::find($this->vehicle_id);
+                if ($vehicle) {
+                    if (!$vehicle->assigned_driver_id) {
+                        $validator->errors()->add(
+                            'vehicle_id', 
+                            '⚠️ Ang sasakyang ito ay walang nakatalagang driver ngayon. Mangyaring mag-assign muna sa Vehicles Page.'
+                        );
+                    }
+
+                    // Calculate total weight of new items being sold
+                    $totalWeight = 0;
+                    if (is_array($this->items)) {
+                        foreach ($this->items as $item) {
+                            if (isset($item['product_id']) && isset($item['quantity'])) {
+                                $product = \App\Models\Product::find($item['product_id']);
+                                if ($product) {
+                                    $totalWeight += ((float)$item['quantity'] * (float)($product->weight_kg ?? 0));
+                                }
+                            }
+                        }
+                    }
+
+                    // Calculate current load on the vehicle
+                    $query = \App\Models\Delivery::where('vehicle_id', $vehicle->id)
+                        ->whereIn('status', ['pending', 'out_for_delivery'])
+                        ->with('sale.saleItems.product');
+                        
+                    // If updating an existing sale, exclude it from current load
+                    if ($this->route('sale')) {
+                        $query->where('sale_id', '!=', $this->route('sale')->id);
+                    }
+
+                    $currentLoad = $query->get()->sum(function ($delivery) {
+                            return $delivery->sale->saleItems->sum(function ($item) {
+                                return (float) $item->quantity * (float) ($item->product->weight_kg ?? 0);
+                            });
+                        });
+
+                    if ((float)$vehicle->capacity < ($currentLoad + $totalWeight)) {
+                        $validator->errors()->add(
+                            'vehicle_id',
+                            '⚠️ Overloaded! Lumagpas sa Max Capacity ng sasakyan ang bigat ng yelo. Bawasan ang order o pumili ng ibang sasakyan.'
+                        );
+                    }
+                }
+            }
+        });
+    }
 }
