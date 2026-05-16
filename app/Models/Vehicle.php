@@ -9,7 +9,7 @@ class Vehicle extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['vehicle_name','plate_number','capacity','status'];
+    protected $fillable = ['vehicle_name','plate_number','capacity','status','assigned_driver_id'];
 
     protected function casts(): array
     {
@@ -18,4 +18,5 @@ class Vehicle extends Model
 
     public function deliveries(){ return $this->hasMany(Delivery::class); }
     public function sales(){ return $this->hasMany(Sale::class); }
+    public function driver(){ return $this->belongsTo(User::class, 'assigned_driver_id'); }
 }
