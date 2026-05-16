@@ -5,10 +5,15 @@
 @section('content')
 
 <!-- PAGE HEADER -->
-<div class="block justify-between page-header md:flex mt-4">
+<div class="block justify-between page-header md:flex mt-4 items-center">
     <div>
-        <h3 class="text-2xl font-bold text-gray-800">Track & Update Delivery</h3>
+        <h3 class="text-2xl font-bold text-gray-800">Track Delivery</h3>
         <p class="text-sm text-gray-500">Manage the progress of Delivery #{{ $delivery->id }}</p>
+    </div>
+    <div class="mt-4 md:mt-0">
+        <a href="{{ route('deliveries.index') }}" class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition flex items-center gap-2 text-sm font-medium shadow-sm">
+            ← Back to List
+        </a>
     </div>
 </div>
 
@@ -39,6 +44,16 @@
                     </p>
                 </div>
                 <div>
+                    <label class="text-xs text-gray-400 uppercase font-semibold">Assigned Driver</label>
+                    <p class="text-sm font-medium text-gray-800">
+                        @if($delivery->status === 'delivered' && $delivery->deliverer)
+                            {{ $delivery->deliverer->name }} <span class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full ml-1 font-bold tracking-wide">COMPLETED BY</span>
+                        @else
+                            {{ $delivery->vehicle->driver->name ?? 'None' }}
+                        @endif
+                    </p>
+                </div>
+                <div>
                     <label class="text-xs text-gray-400 uppercase font-semibold">Destination</label>
                     <p class="text-sm text-gray-700">{{ $delivery->destination }}</p>
                 </div>
@@ -63,49 +78,37 @@
         </div>
     </div>
 
-    <!-- RIGHT: STATUS UPDATE FORM -->
+    <!-- RIGHT: TRACKING HISTORY & STATUS -->
     <div class="xl:col-span-8 col-span-12">
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 mb-6">
             <div class="bg-blue-600 text-white px-5 py-3 font-semibold">
-                Update Status & Tracking Notes
+                Current Status
             </div>
-            <div class="p-5">
-                <form action="{{ route('deliveries.update', $delivery) }}" method="POST">
-                    @csrf
-                    @method('PUT')
-
-                    <div class="grid grid-cols-12 gap-4">
-                        <div class="col-span-12 md:col-span-6">
-                            <label class="form-label font-semibold">Current Status</label>
-                            <select name="status" class="form-control" required>
-                                <option value="pending" @selected(old('status', $delivery->status) === 'pending')>Pending (Reserved)</option>
-                                <option value="out_for_delivery" @selected(old('status', $delivery->status) === 'out_for_delivery')>Out for Delivery (In Transit)</option>
-                                <option value="delivered" @selected(old('status', $delivery->status) === 'delivered')>Delivered (Completed)</option>
-                                <option value="cancelled" @selected(old('status', $delivery->status) === 'cancelled')>Cancelled</option>
-                            </select>
-                        </div>
-
-                        <div class="col-span-12">
-                            <label class="form-label font-semibold">Update Status Notes</label>
-                            <textarea name="notes" class="form-control" rows="3" placeholder="Enter any updates or notes regarding the current delivery status..."></textarea>
-                            <div class="text-[10px] text-muted mt-1">These notes will be added to the tracking history.</div>
-                        </div>
-                    </div>
-
-                    <div class="mt-6 flex gap-2">
-                        <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-lg shadow hover:bg-blue-700 transition">
-                            Save Changes
-                        </button>
-                        <a href="{{ route('deliveries.index') }}" class="bg-gray-100 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-200 transition">
-                            Back to List
-                        </a>
-                    </div>
-                </form>
+            <div class="p-5 flex items-center gap-4">
+                @php
+                    $statusMap = [
+                        'pending' => ['bg-yellow-100 text-yellow-800', 'PENDING (Reserved)'],
+                        'out_for_delivery' => ['bg-blue-100 text-blue-800', 'IN TRANSIT'],
+                        'delivered' => ['bg-green-100 text-green-800', 'DELIVERED (Completed)'],
+                        'cancelled' => ['bg-red-100 text-red-800', 'CANCELLED'],
+                    ];
+                    [$color, $label] = $statusMap[$delivery->status] ?? ['bg-gray-100 text-gray-800', strtoupper($delivery->status)];
+                @endphp
+                <div class="text-4xl">
+                    @if($delivery->status === 'delivered') ✅
+                    @elseif($delivery->status === 'cancelled') ❌
+                    @elseif($delivery->status === 'out_for_delivery') 🚚
+                    @else 🕐 @endif
+                </div>
+                <div>
+                    <h4 class="text-lg font-bold text-gray-800">{{ $label }}</h4>
+                    <p class="text-sm text-gray-500 mt-1">Status updates are managed by the driver via the mobile portal.</p>
+                </div>
             </div>
         </div>
 
         <!-- TRACKING HISTORY -->
-        <div class="mt-8">
+        <div>
             <h4 class="text-lg font-semibold text-gray-700 mb-4">Delivery Tracking History</h4>
             <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
                 <ul class="list-none space-y-6">

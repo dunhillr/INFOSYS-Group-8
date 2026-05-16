@@ -193,63 +193,32 @@ function setThisWeek() {
                         </td>
                         <td class="px-4 py-3 text-center">
                             <div class="flex justify-center items-center">
-                                {{-- ── CONSOLIDATED MANAGE DROPDOWN ── --}}
-                                <div class="hs-dropdown relative inline-flex [--placement:bottom-right]">
-                                    <button id="actions-{{ $delivery->id }}" type="button" class="hs-dropdown-toggle bg-white border border-gray-200 text-gray-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-gray-50 transition flex items-center gap-1 shadow-sm">
-                                        Manage
-                                        <svg class="hs-dropdown-open:rotate-180 w-3.5 h-3.5 transition-transform" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                        </svg>
-                                    </button>
+                                {{-- ── ACTION BUTTONS ── --}}
+                                <div class="flex gap-2 justify-center">
+                                    {{-- ── VIEW DETAILS ── --}}
+                                    <a href="{{ route('deliveries.edit', $delivery) }}" class="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 p-2 rounded-lg transition" title="View Details">
+                                        <i class="bx bx-show text-lg"></i>
+                                    </a>
 
-                                    <div class="hs-dropdown-menu transition-[opacity,margin] duration hs-dropdown-open:opacity-100 opacity-0 hidden z-[100] bg-white shadow-xl rounded-xl p-2 mt-2 border border-gray-100 min-w-[180px] text-start" aria-labelledby="actions-{{ $delivery->id }}">
-                                        {{-- ── SET TO PENDING ── --}}
-                                        @if($delivery->status !== 'pending')
-                                            <form action="{{ route('deliveries.updateStatus', $delivery) }}" method="POST">
-                                                @csrf @method('PATCH')
-                                                <input type="hidden" name="status" value="pending">
-                                                <button type="submit" class="w-full flex items-center gap-2 py-2 px-3 rounded-md text-sm text-yellow-600 hover:bg-yellow-50 font-bold text-start">
-                                                    🕐 Set Pending
-                                                </button>
-                                            </form>
-                                        @endif
+                                    {{-- ── CANCEL DELIVERY ── --}}
+                                    @if(in_array($delivery->status, ['pending', 'out_for_delivery']))
+                                        <form action="{{ route('deliveries.cancel', $delivery) }}" method="POST" onsubmit="return confirm('Sigurado ka bang i-cancel ang delivery na ito? Ibabalik ng system ang yelo sa inventory.')" class="inline">
+                                            @csrf
+                                            <button type="submit" class="text-orange-600 hover:text-orange-800 bg-orange-50 hover:bg-orange-100 p-2 rounded-lg transition" title="Cancel/Failed Delivery">
+                                                <i class="bx bx-x-circle text-lg"></i>
+                                            </button>
+                                        </form>
+                                    @endif
 
-                                        {{-- ── MARK DELIVERED ── --}}
-                                        @if($delivery->status !== 'delivered')
-                                            <form action="{{ route('deliveries.updateStatus', $delivery) }}" method="POST">
-                                                @csrf @method('PATCH')
-                                                <input type="hidden" name="status" value="delivered">
-                                                <button type="submit" class="w-full flex items-center gap-2 py-2 px-3 rounded-md text-sm text-green-600 hover:bg-green-50 font-bold text-start">
-                                                    ✅ Mark Delivered
-                                                </button>
-                                            </form>
-                                        @endif
-
-                                        {{-- ── CANCEL DELIVERY ── --}}
-                                        @if($delivery->status !== 'cancelled')
-                                            <form action="{{ route('deliveries.updateStatus', $delivery) }}" method="POST">
-                                                @csrf @method('PATCH')
-                                                <input type="hidden" name="status" value="cancelled">
-                                                <button type="submit" class="w-full flex items-center gap-2 py-2 px-3 rounded-md text-sm text-red-600 hover:bg-red-50 font-bold text-start">
-                                                    ❌ Cancel Delivery
-                                                </button>
-                                            </form>
-                                        @endif
-
-                                        {{-- ── OWNER DELETE (SUBTLE) ── --}}
-                                        @if(Auth::user()->user_type === 'owner')
-                                            <div class="h-px bg-gray-100 my-1"></div>
-                                            <form action="{{ route('deliveries.destroy', $delivery) }}" method="POST" onsubmit="return confirm('Delete this record?')">
-                                                @csrf @method('DELETE')
-                                                <button type="submit" class="w-full flex items-center gap-2 py-2 px-3 rounded-md text-xs text-gray-400 hover:text-red-600 hover:bg-red-50 font-medium text-start">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                    </svg>
-                                                    Delete Record
-                                                </button>
-                                            </form>
-                                        @endif
-                                    </div>
+                                    {{-- ── OWNER DELETE ── --}}
+                                    @if(Auth::user()->user_type === 'owner')
+                                        <form action="{{ route('deliveries.destroy', $delivery) }}" method="POST" onsubmit="return confirm('Delete this record?')" class="inline">
+                                            @csrf @method('DELETE')
+                                            <button type="submit" class="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-2 rounded-lg transition" title="Delete Record">
+                                                <i class="bx bx-trash text-lg"></i>
+                                            </button>
+                                        </form>
+                                    @endif
                                 </div>
                             </div>
                         </td>

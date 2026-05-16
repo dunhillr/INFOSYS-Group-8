@@ -34,6 +34,33 @@ class InventoryService
         return $this->getInventoryForProduct();
     }
 
+    /**
+     * Calculate stock that is committed to pending/in-transit deliveries.
+     */
+    public function getReservedStock(int $productId): float
+    {
+        return (float) \App\Models\Delivery::whereIn('status', ['pending', 'out_for_delivery'])
+            ->whereHas('sale.saleItems', function($q) use ($productId) {
+                $q->where('product_id', $productId);
+            })
+            ->with('sale.saleItems')
+            ->get()
+            ->sum(function($delivery) use ($productId) {
+                return $delivery->sale->saleItems->where('product_id', $productId)->sum('quantity');
+            });
+    }
+
+    /**
+     * Calculate available stock (Current Stock - Reserved for Deliveries).
+     */
+    public function getAvailableStock(int $productId): float
+    {
+        $inventory = $this->getInventoryForProduct($productId);
+        $currentStock = (float) $inventory->current_stock;
+        $reserved = $this->getReservedStock($productId);
+        return max(0, $currentStock - $reserved);
+    }
+
     public function addStock(float $quantity, string $referenceType, int $referenceId, ?int $userId = null, ?string $remarks = null, ?int $productId = null): Inventory
     {
         return DB::transaction(function () use ($quantity, $referenceType, $referenceId, $userId, $remarks, $productId) {

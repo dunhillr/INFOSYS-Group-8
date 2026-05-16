@@ -33,27 +33,10 @@
         <option value="">Unassigned</option>
         @foreach ($vehicles as $vehicle)
             <option value="{{ $vehicle->id }}" @selected(old('vehicle_id', $delivery->vehicle_id ?? '') == $vehicle->id)>
-                {{ $vehicle->vehicle_name }}{{ $vehicle->plate_number ? ' - '.$vehicle->plate_number : '' }}
+                {{ $vehicle->vehicle_name }}{{ $vehicle->plate_number ? ' - '.$vehicle->plate_number : '' }} (Driver: {{ $vehicle->driver->name ?? 'None' }})
             </option>
         @endforeach
     </select>
-</div>
-
-{{-- Driver (NEW) --}}
-<div class="xl:col-span-6 col-span-12">
-    <label class="form-label">Assigned Driver</label>
-    <select name="driver_id" class="form-control">
-        <option value="">— No Driver Assigned —</option>
-        @foreach ($drivers as $driver)
-            <option value="{{ $driver->id }}" @selected(old('driver_id', $delivery->driver_id ?? '') == $driver->id)>
-                {{ $driver->name }}
-            </option>
-        @endforeach
-    </select>
-    <div class="text-[10px] text-textmuted mt-1">
-        <i class="ri-smartphone-line me-1"></i>
-        The assigned driver will see this delivery on their Mobile Driver Portal.
-    </div>
 </div>
 
 {{-- Destination --}}
