@@ -67,7 +67,7 @@
     @if($deliveries->contains('status', 'pending'))
     <form action="{{ route('driver.startTrip') }}" method="POST" style="margin-bottom: 20px;">
         @csrf
-        <button type="submit" onclick="return confirm('Start the whole trip? All pending deliveries will become In Transit.')" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; background: #16a34a; color: #fff; border-radius: 14px; padding: 16px; font-size: 18px; font-weight: 800; text-decoration: none; border: none; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+        <button type="submit" data-confirm-start style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; background: #16a34a; color: #fff; border-radius: 14px; padding: 16px; font-size: 18px; font-weight: 800; text-decoration: none; border: none; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
             🚚 Start Delivery 
         </button>
     </form>

@@ -137,8 +137,9 @@
 
                         @if(auth()->user()->user_type === 'owner')
                         <form action="{{ route('productions.destroy', $production) }}" 
-                              method="POST" 
-                              onsubmit="return confirm('Delete this production record?')">
+                              method="POST"
+                              data-confirm-delete
+                              data-confirm-item="Production record ng {{ $production->product->product_name ?? 'Unknown' }}">
                             @csrf 
                             @method('DELETE')
 

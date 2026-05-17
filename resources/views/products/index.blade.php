@@ -93,8 +93,9 @@
 
                         @if(Auth::user()->isOwner())
                         <form action="{{ route('products.destroy', $product) }}" 
-                              method="POST" 
-                              onsubmit="return confirm('Delete this product?')">
+                              method="POST"
+                              data-confirm-delete
+                              data-confirm-item="{{ $product->product_name }}">
                             @csrf 
                             @method('DELETE')
 

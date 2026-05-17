@@ -17,7 +17,7 @@
     @endif
 </td>
 <td>{{ $user->is_active ? '<span class="text-green-600 font-semibold text-xs">Active</span>' : '<span class="text-red-500 text-xs">Inactive</span>' }}</td>
-<td><a href="{{ route('users.edit', $user) }}" class="ti-btn ti-btn-info-full ti-btn-sm">Edit</a>@if (auth()->id() !== $user->id)<form action="{{ route('users.destroy', $user) }}" method="POST" class="inline-block" onsubmit="return confirm('Delete this user?')">@csrf @method('DELETE')<button class="ti-btn ti-btn-danger-full ti-btn-sm">Delete</button></form>@endif</td></tr>
+<td><a href="{{ route('users.edit', $user) }}" class="ti-btn ti-btn-info-full ti-btn-sm">Edit</a>@if (auth()->id() !== $user->id)<form action="{{ route('users.destroy', $user) }}" method="POST" class="inline-block" data-confirm-delete data-confirm-item="{{ $user->name }}">@csrf @method('DELETE')<button class="ti-btn ti-btn-danger-full ti-btn-sm">Delete</button></form>@endif</td></tr>
 @empty <tr><td colspan="6" class="text-center">No users found.</td></tr>
 @endforelse
 </tbody></table></div>{{ $users->links() }}</div></div>

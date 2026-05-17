@@ -201,8 +201,11 @@
 
                             @if(auth()->user()->user_type === 'owner')
                             <form action="{{ route('sales.destroy', $sale) }}" 
-                                  method="POST" 
-                                  onsubmit="return confirm('Delete this sale record?')">
+                                  method="POST"
+                                  data-confirm-delete
+                                  data-confirm-item="Sale #{{ $sale->sale_number }}"
+                                  data-confirm-title="Delete Sale?"
+                                  data-confirm-text="<strong>Sale #{{ $sale->sale_number }}</strong> and all its items will be permanently deleted. This action cannot be undone.">
                                 @csrf 
                                 @method('DELETE')
 

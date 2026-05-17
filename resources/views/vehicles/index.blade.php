@@ -100,8 +100,9 @@
                         </a>
 
                         <form action="{{ route('vehicles.destroy', $vehicle) }}" 
-                              method="POST" 
-                              onsubmit="return confirm('Delete this vehicle?')">
+                              method="POST"
+                              data-confirm-delete
+                              data-confirm-item="{{ $vehicle->vehicle_name }} ({{ $vehicle->plate_number }})">
                             @csrf 
                             @method('DELETE')
 

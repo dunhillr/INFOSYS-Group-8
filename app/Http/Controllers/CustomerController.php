@@ -31,6 +31,28 @@ class CustomerController extends Controller
         return redirect()->route('customers.index')->with('success', 'Customer created successfully.');
     }
 
+    /**
+     * Quick-store a customer via AJAX from the Add Sale modal.
+     * Returns JSON: { id, customer_name } on success.
+     */
+    public function quickStore(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $validated = $request->validate([
+            'customer_name'    => ['required', 'string', 'max:255'],
+            'customer_contact' => ['nullable', 'string', 'max:50'],
+            'customer_address' => ['required', 'string'],
+        ]);
+
+        $customer = Customer::create($validated);
+        ActivityLogService::log(Auth::id(), 'create', 'customers', 'Quick-created customer #'.$customer->id.' from Sales form', $request);
+
+        return response()->json([
+            'success'       => true,
+            'id'            => $customer->id,
+            'customer_name' => $customer->customer_name,
+        ]);
+    }
+
     public function edit(Customer $customer): View
     {
         return view('customers.edit', compact('customer'));

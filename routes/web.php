@@ -31,6 +31,7 @@ Route::middleware(['auth', 'role:owner,employee'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::resource('products', ProductController::class)->except('show');
+    Route::post('customers/quick-store', [CustomerController::class, 'quickStore'])->name('customers.quickStore');
     Route::resource('customers', CustomerController::class)->except('show');
     Route::get('productions/product-parent/{product}', [ProductionController::class, 'getProductParent'])->name('productions.product-parent');
     Route::resource('productions', ProductionController::class)->except('show');

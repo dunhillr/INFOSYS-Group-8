@@ -117,6 +117,9 @@
         .dp-row-label { width: 110px; font-size: 12px; color: var(--gray); font-weight: 500; flex-shrink: 0; padding-top: 1px; }
         .dp-row-value { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; }
     </style>
+
+    {{-- SweetAlert2 CSS --}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 </head>
 <body>
 
@@ -160,6 +163,76 @@
         </button>
     </form>
 </div>
+
+{{-- SweetAlert2 JS --}}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // ── Driver Portal Confirmation ────────────────────────
+    document.querySelectorAll('button[data-confirm-start], button[data-confirm-delivery]').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            const form = this.closest('form');
+            
+            const isDelivery = this.hasAttribute('data-confirm-delivery');
+            const title = isDelivery ? 'Confirm Delivery?' : 'Start Delivery?';
+            const text  = isDelivery 
+                            ? 'Make sure everything is correct before submitting.'
+                            : 'All pending deliveries will become In Transit.';
+
+            Swal.fire({
+                title: title,
+                text: text,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#16a34a', // green
+                cancelButtonColor:  '#6b7280', // gray
+                confirmButtonText: 'Confirm',
+                cancelButtonText:  'Cancel',
+                reverseButtons: true,
+                focusCancel: true,
+                customClass: {
+                    popup:         'rounded-2xl shadow-2xl',
+                    confirmButton: 'rounded-lg px-5 py-2 text-sm font-bold',
+                    cancelButton:  'rounded-lg px-5 py-2 text-sm font-semibold',
+                },
+            }).then(function (result) {
+                if (result.isConfirmed) {
+                    if (form) form.submit();
+                }
+            });
+        });
+    });
+
+    // ── Success Toast ─────────
+    @if(session('success'))
+    Swal.fire({
+        toast: true,
+        position: 'top',
+        icon: 'success',
+        title: @json(session('success')),
+        showConfirmButton: false,
+        timer: 3500,
+        timerProgressBar: true,
+        customClass: { popup: 'rounded-xl shadow-lg text-sm', container: 'mt-14' },
+    });
+    @endif
+
+    // ── Error Toast ─────────────
+    @if(session('error'))
+    Swal.fire({
+        toast: true,
+        position: 'top',
+        icon: 'error',
+        title: @json(session('error')),
+        showConfirmButton: false,
+        timer: 5000,
+        timerProgressBar: true,
+        customClass: { popup: 'rounded-xl shadow-lg text-sm', container: 'mt-14' },
+    });
+    @endif
+});
+</script>
 
 @stack('scripts')
 </body>

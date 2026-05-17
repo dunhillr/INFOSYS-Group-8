@@ -118,7 +118,7 @@
 
             <button type="submit" class="dp-btn dp-btn-confirm" id="submitBtn" disabled
                 style="opacity: .4; cursor: not-allowed;"
-                onclick="return confirm('Confirm the delivery? Make sure everything is correct before submitting.')">
+                data-confirm-delivery>
                 Confirm Delivery
             </button>
         </form>

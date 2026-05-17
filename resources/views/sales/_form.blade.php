@@ -3,14 +3,23 @@
     <!-- Customer Selection -->
     <div class="xl:col-span-12 col-span-12">
         <label class="form-label">Customer</label>
-        <select name="customer_id" class="form-control">
-            <option value="">Walk-in / None</option>
-            @foreach ($customers as $customer)
-                <option value="{{ $customer->id }}" @selected(old('customer_id', $sale->customer_id ?? '') == $customer->id)>
-                    {{ $customer->customer_name }}
-                </option>
-            @endforeach
-        </select>
+        <div class="flex items-center gap-2">
+            <select name="customer_id" id="customer_select" class="form-control flex-1">
+                <option value="">Walk-in / None</option>
+                @foreach ($customers as $customer)
+                    <option value="{{ $customer->id }}" @selected(old('customer_id', $sale->customer_id ?? '') == $customer->id)>
+                        {{ $customer->customer_name }}
+                    </option>
+                @endforeach
+            </select>
+            <button type="button" id="open_quick_add_customer_btn"
+                title="Magdagdag ng bagong customer"
+                class="flex-shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-lg bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-lg shadow transition-all duration-150"
+            >
+                +
+            </button>
+        </div>
+        <p class="text-xs text-gray-400 mt-1">Kung walk-in at magpapa-deliver, i-click ang <strong>+</strong> para mag-register bilang customer.</p>
     </div>
 
     <!-- Delivery Type -->
@@ -238,7 +247,188 @@
     </div>
 </div>
 
-<!-- Products Data for JS -->
+{{-- ╔══════════════════════════════════════════════════════════╗ --}}
+{{-- ║         QUICK ADD CUSTOMER MODAL                        ║ --}}
+{{-- ╚══════════════════════════════════════════════════════════╝ --}}
+<div id="quick_add_customer_modal"
+     class="fixed inset-0 z-50 flex items-center justify-center hidden"
+     role="dialog" aria-modal="true" aria-labelledby="quick_modal_title">
+
+    {{-- Backdrop --}}
+    <div id="quick_modal_backdrop" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+
+    {{-- Modal Card --}}
+    <div class="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 animate-fade-in">
+
+        {{-- Header --}}
+        <div class="flex items-center justify-between px-6 py-4 border-b">
+            <div class="flex items-center gap-2">
+                <span class="text-2xl">🧑‍💼</span>
+                <h2 id="quick_modal_title" class="text-base font-bold text-gray-800">Quick Add Customer</h2>
+            </div>
+            <button type="button" id="close_quick_add_customer_btn"
+                class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+        </div>
+
+        {{-- Body --}}
+        <div class="px-6 py-5 space-y-4">
+
+            {{-- Alert Area --}}
+            <div id="quick_add_alert" class="hidden rounded-lg px-4 py-3 text-sm font-medium"></div>
+
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Customer Name <span class="text-red-500">*</span></label>
+                <input type="text" id="qc_name" placeholder="e.g. Juan dela Cruz"
+                    class="form-control w-full" autocomplete="off">
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Delivery Address <span class="text-red-500">*</span></label>
+                <textarea id="qc_address" rows="2" placeholder="e.g. Purok 3, Brgy. Mabini, Cotabato City"
+                    class="form-control w-full resize-none"></textarea>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Contact Number <span class="text-gray-400">(Optional)</span></label>
+                <input type="text" id="qc_contact" placeholder="e.g. 09XXXXXXXXX"
+                    class="form-control w-full" autocomplete="off">
+            </div>
+        </div>
+
+        {{-- Footer --}}
+        <div class="flex items-center justify-end gap-3 px-6 py-4 border-t bg-gray-50 rounded-b-2xl">
+            <button type="button" id="cancel_quick_add_btn"
+                class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 bg-white border hover:bg-gray-100 transition">
+                Cancel
+            </button>
+            <button type="button" id="save_quick_add_customer_btn"
+                class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 shadow transition-all flex items-center gap-2">
+                <span id="qc_btn_spinner" class="hidden w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                💾 Save Customer
+            </button>
+        </div>
+    </div>
+</div>
+
+{{-- Quick Add Customer AJAX Script --}}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const openBtn     = document.getElementById('open_quick_add_customer_btn');
+    const closeBtn    = document.getElementById('close_quick_add_customer_btn');
+    const cancelBtn   = document.getElementById('cancel_quick_add_btn');
+    const saveBtn     = document.getElementById('save_quick_add_customer_btn');
+    const modal       = document.getElementById('quick_add_customer_modal');
+    const backdrop    = document.getElementById('quick_modal_backdrop');
+    const alertBox    = document.getElementById('quick_add_alert');
+    const spinner     = document.getElementById('qc_btn_spinner');
+    const customerSel = document.getElementById('customer_select');
+
+    const qcName    = document.getElementById('qc_name');
+    const qcAddress = document.getElementById('qc_address');
+    const qcContact = document.getElementById('qc_contact');
+
+    function openModal() {
+        modal.classList.remove('hidden');
+        alertBox.classList.add('hidden');
+        qcName.value = '';
+        qcAddress.value = '';
+        qcContact.value = '';
+        qcName.focus();
+    }
+
+    function closeModal() {
+        modal.classList.add('hidden');
+    }
+
+    function showAlert(message, type = 'error') {
+        alertBox.className = 'rounded-lg px-4 py-3 text-sm font-medium ' +
+            (type === 'success' ? 'bg-green-100 text-green-800 border border-green-300' : 'bg-red-100 text-red-800 border border-red-300');
+        alertBox.textContent = message;
+        alertBox.classList.remove('hidden');
+    }
+
+    if (openBtn) openBtn.addEventListener('click', openModal);
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+    if (backdrop)  backdrop.addEventListener('click', closeModal);
+
+    // Close on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
+    });
+
+    if (saveBtn) {
+        saveBtn.addEventListener('click', function () {
+            const name    = qcName.value.trim();
+            const address = qcAddress.value.trim();
+            const contact = qcContact.value.trim();
+
+            alertBox.classList.add('hidden');
+
+            // Client-side validation
+            if (!name) { showAlert('⚠️ Kailangan ang pangalan ng customer.'); qcName.focus(); return; }
+            if (!address) { showAlert('⚠️ Kailangan ang delivery address.'); qcAddress.focus(); return; }
+
+            // Show spinner
+            spinner.classList.remove('hidden');
+            saveBtn.disabled = true;
+
+            const csrfToken = document.querySelector('meta[name="csrf-token"]');
+            const token = csrfToken ? csrfToken.getAttribute('content') : '{{ csrf_token() }}';
+
+            fetch('{{ route("customers.quickStore") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': token,
+                },
+                body: JSON.stringify({
+                    _token:           token,
+                    customer_name:    name,
+                    customer_address: address,
+                    customer_contact: contact || null,
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                spinner.classList.add('hidden');
+                saveBtn.disabled = false;
+
+                if (data.success) {
+                    // Inject new option into dropdown
+                    const newOption = new Option(data.customer_name, data.id, true, true);
+                    customerSel.add(newOption);
+                    customerSel.value = data.id;
+
+                    // Auto-switch to Delivery type since they want delivery
+                    const deliveryTypeSelect = document.getElementById('delivery_type');
+                    if (deliveryTypeSelect && deliveryTypeSelect.value === 'walk_in') {
+                        deliveryTypeSelect.value = 'delivery';
+                        deliveryTypeSelect.dispatchEvent(new Event('change'));
+                    }
+
+                    showAlert('✅ Customer na-save! Pinili na sa dropdown.', 'success');
+
+                    // Auto-close modal after 1.5s
+                    setTimeout(() => closeModal(), 1500);
+                } else {
+                    // Laravel validation errors
+                    const messages = data.errors
+                        ? Object.values(data.errors).flat().join(' | ')
+                        : (data.message || 'Hindi na-save ang customer.');
+                    showAlert('❌ ' + messages);
+                }
+            })
+            .catch(() => {
+                spinner.classList.add('hidden');
+                saveBtn.disabled = false;
+                showAlert('❌ Network error. Subukan ulit.');
+            });
+        });
+    }
+});
+</script>
 <script>
     const productsData = [
         @foreach($products as $product)

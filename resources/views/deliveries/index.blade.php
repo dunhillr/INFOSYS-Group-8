@@ -208,7 +208,7 @@ function setThisWeek() {
 
                                     {{-- ── CANCEL DELIVERY ── --}}
                                     @if(in_array($delivery->status, ['pending', 'out_for_delivery']))
-                                        <form action="{{ route('deliveries.cancel', $delivery) }}" method="POST" onsubmit="return confirm('Sigurado ka bang i-cancel ang delivery na ito? Ibabalik ng system ang yelo sa inventory.')" class="inline">
+                                        <form action="{{ route('deliveries.cancel', $delivery) }}" method="POST" data-confirm-cancel class="inline">
                                             @csrf
                                             <button type="submit" class="text-orange-600 hover:text-orange-800 bg-orange-50 hover:bg-orange-100 p-2 rounded-lg transition" title="Cancel/Failed Delivery">
                                                 <i class="bx bx-x-circle text-lg"></i>
@@ -218,7 +218,7 @@ function setThisWeek() {
 
                                     {{-- ── OWNER DELETE ── --}}
                                     @if(Auth::user()->user_type === 'owner')
-                                        <form action="{{ route('deliveries.destroy', $delivery) }}" method="POST" onsubmit="return confirm('Delete this record?')" class="inline">
+                                        <form action="{{ route('deliveries.destroy', $delivery) }}" method="POST" data-confirm-delete data-confirm-item="Delivery ng {{ $delivery->sale->sale_number ?? 'record' }}" class="inline">
                                             @csrf @method('DELETE')
                                             <button type="submit" class="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-2 rounded-lg transition" title="Delete Record">
                                                 <i class="bx bx-trash text-lg"></i>
