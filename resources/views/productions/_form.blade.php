@@ -82,7 +82,7 @@
                        name="parent_quantity_used"
                        class="form-control"
                        value="{{ old('parent_quantity_used', $production->parent_quantity_used ?? '') }}"
-                       placeholder="e.g. 2">
+                       placeholder="Enter the quantity of raw material used">
                 <p class="text-xs text-gray-500 mt-1" id="parent_qty_hint"></p>
                 @error('parent_quantity_used')
                     <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
@@ -138,6 +138,7 @@
             qtyProducedInput.readOnly = true;
             qtyProducedInput.classList.add('bg-gray-100');
             qtyProducedHint.textContent = `Auto-calculated based on weight. ${yieldText}`;
+            qtyProducedHint.className = 'text-xs text-gray-500 mt-1';
 
             parentDesc.textContent =
                 `"${currentProduct.name}" is produced from "${currentProduct.parent_name}". ` +
@@ -158,7 +159,8 @@
             // Make quantity produced editable again
             qtyProducedInput.readOnly = false;
             qtyProducedInput.classList.remove('bg-gray-100');
-            qtyProducedHint.textContent = '';
+            qtyProducedHint.textContent = productId ? '⚙️ Direct production (from Machine Maker). Enter quantity produced manually.' : '';
+            qtyProducedHint.className = 'text-xs text-blue-600 mt-1 font-medium';
         }
     }
     

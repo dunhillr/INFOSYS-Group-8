@@ -28,7 +28,7 @@
     <div class="xl:col-span-6 col-span-12">
         <label class="form-label">Weight (kg) <span class="text-red-500">*</span></label>
         <input type="number" step="0.01" min="0.01" name="weight_kg" class="form-control"
-               value="{{ old('weight_kg', $product->weight_kg ?? '') }}" required placeholder="e.g. 150 for Block Ice, 25 for Crushed Ice bag">
+               value="{{ old('weight_kg', $product->weight_kg ?? '') }}" required placeholder="Enter weight">
         <p class="text-xs text-gray-500 mt-1">Used to automatically compute production yield.</p>
         @error('weight_kg')
             <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
@@ -42,7 +42,7 @@
             <span class="text-xs text-gray-400 font-normal ml-1">(optional — e.g. Block Ice for Crushed Ice)</span>
         </label>
         <select name="parent_product_id" class="form-control">
-            <option value="">-- None (standalone product) --</option>
+            <option value="">Machine Maker (Direct Production)</option>
             @foreach($allProducts as $p)
                 @if(($product->id ?? null) != $p->id)
                     <option value="{{ $p->id }}"

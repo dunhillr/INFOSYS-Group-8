@@ -91,6 +91,7 @@
                             Edit
                         </a>
 
+                        @if(Auth::user()->isOwner())
                         <form action="{{ route('products.destroy', $product) }}" 
                               method="POST" 
                               onsubmit="return confirm('Delete this product?')">
@@ -101,6 +102,7 @@
                                 Delete
                             </button>
                         </form>
+                        @endif
 
                     </td>
 
