@@ -62,8 +62,9 @@ class DeliveryController extends Controller
                 $end   = \Carbon\Carbon::parse($dates[1], 'Asia/Manila')->endOfDay()->setTimezone('UTC');
                 $query->whereBetween('delivery_date', [$start, $end]);
             } else {
-                $date = \Carbon\Carbon::parse($dates[0], 'Asia/Manila')->startOfDay()->setTimezone('UTC');
-                $query->whereDate('delivery_date', $date);
+                $start = \Carbon\Carbon::parse($dates[0], 'Asia/Manila')->startOfDay()->setTimezone('UTC');
+                $end   = \Carbon\Carbon::parse($dates[0], 'Asia/Manila')->endOfDay()->setTimezone('UTC');
+                $query->whereBetween('delivery_date', [$start, $end]);
             }
         } elseif ($request->filled('start_date') && $request->filled('end_date')) {
             $start = \Carbon\Carbon::parse($request->start_date, 'Asia/Manila')->startOfDay()->setTimezone('UTC');

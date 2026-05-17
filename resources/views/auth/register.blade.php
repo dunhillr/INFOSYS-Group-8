@@ -13,17 +13,16 @@
         :root {
             --bobong-primary: #0ea5e9;
             --bobong-primary-dark: #0284c7;
-            --bobong-accent: #22d3ee;
-            --bobong-dark: #020617;
-            --bobong-dark-soft: #0f172a;
-            --bobong-panel: rgba(15, 23, 42, 0.78);
-            --bobong-panel-soft: rgba(15, 23, 42, 0.55);
-            --bobong-border: rgba(255, 255, 255, 0.10);
-            --bobong-text: #e2e8f0;
-            --bobong-muted: #94a3b8;
+            --bobong-accent: #38bdf8;
+            --bobong-dark: #0f172a;
+            --bobong-dark-soft: #1e293b;
+            --bobong-panel: #ffffff;
+            --bobong-border: #e2e8f0;
+            --bobong-text: #334155;
+            --bobong-muted: #64748b;
             --bobong-danger: #ef4444;
             --bobong-success: #10b981;
-            --bobong-shadow: 0 30px 80px rgba(2, 8, 23, 0.40);
+            --bobong-shadow: 0 20px 40px -15px rgba(148, 163, 184, 0.15), 0 0 0 1px rgba(148, 163, 184, 0.05);
         }
 
         * {
@@ -36,10 +35,10 @@
             font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             color: var(--bobong-text);
             background:
-                radial-gradient(circle at top left, rgba(34, 211, 238, 0.16), transparent 28%),
-                radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.18), transparent 24%),
-                linear-gradient(135deg, #020617 0%, #0f172a 48%, #111827 100%);
-            overflow-x: hidden;
+                radial-gradient(circle at top left, rgba(56, 189, 248, 0.12), transparent 35%),
+                radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.10), transparent 30%),
+                #f8fafc;
+            overflow: hidden;
         }
 
         .auth-shell {
@@ -49,14 +48,16 @@
             align-items: center;
             justify-content: center;
             padding: 32px 18px;
+            overflow: hidden;
         }
 
         .orb {
             position: absolute;
             border-radius: 999px;
             filter: blur(90px);
-            opacity: .35;
+            opacity: .25;
             pointer-events: none;
+            z-index: 1;
         }
 
         .orb-1 {
@@ -64,7 +65,7 @@
             height: 320px;
             top: -90px;
             left: -70px;
-            background: #22d3ee;
+            background: #38bdf8;
         }
 
         .orb-2 {
@@ -72,7 +73,7 @@
             height: 340px;
             right: -90px;
             top: 120px;
-            background: #2563eb;
+            background: #0ea5e9;
         }
 
         .orb-3 {
@@ -85,7 +86,9 @@
 
         .auth-container {
             width: 100%;
-            max-width: 1240px;
+            max-width: 1140px;
+            height: 100%;
+            max-height: 650px;
             position: relative;
             z-index: 2;
             display: grid;
@@ -98,58 +101,62 @@
         .auth-showcase {
             border: 1px solid var(--bobong-border);
             border-radius: 28px;
-            background: var(--bobong-panel);
-            backdrop-filter: blur(18px);
             box-shadow: var(--bobong-shadow);
             overflow: hidden;
+            height: 100%;
         }
 
         .auth-card {
-            padding: 38px;
+            padding: 32px 38px;
+            background: var(--bobong-panel);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            overflow-y: auto;
         }
 
         .auth-showcase {
             position: relative;
-            background:
-                linear-gradient(160deg, rgba(14, 165, 233, 0.18), rgba(15, 23, 42, 0.86)),
-                rgba(15, 23, 42, 0.85);
+            background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
+            border: 1px solid #bae6fd;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
-            padding: 38px;
+            justify-content: center;
+            padding: 32px 38px;
+            overflow-y: auto;
         }
 
         .brand-row {
             display: flex;
             align-items: center;
             gap: 14px;
-            margin-bottom: 28px;
+            margin-bottom: 24px;
         }
 
         .brand-mark {
-            width: 56px;
-            height: 56px;
-            border-radius: 18px;
+            width: 52px;
+            height: 52px;
+            border-radius: 16px;
             display: grid;
             place-items: center;
             background: linear-gradient(135deg, var(--bobong-primary), var(--bobong-accent));
-            color: #06233a;
+            color: #ffffff;
             font-size: 1.1rem;
             font-weight: 900;
-            box-shadow: 0 18px 36px rgba(14, 165, 233, 0.28);
+            box-shadow: 0 10px 20px rgba(14, 165, 233, 0.15);
         }
 
         .brand-title {
             margin: 0;
-            color: #fff;
+            color: var(--bobong-dark);
             font-size: 1.1rem;
             font-weight: 800;
         }
 
         .brand-subtitle {
-            margin: 4px 0 0;
+            margin: 2px 0 0;
             color: var(--bobong-muted);
-            font-size: .9rem;
+            font-size: .88rem;
         }
 
         .auth-badge {
@@ -159,9 +166,9 @@
             width: fit-content;
             padding: 8px 14px;
             border-radius: 999px;
-            border: 1px solid rgba(34, 211, 238, 0.25);
-            background: rgba(34, 211, 238, 0.10);
-            color: #bdf6ff;
+            border: 1px solid rgba(14, 165, 233, 0.25);
+            background: rgba(14, 165, 233, 0.08);
+            color: #0369a1;
             font-size: .78rem;
             font-weight: 800;
             text-transform: uppercase;
@@ -170,134 +177,72 @@
 
         .auth-heading {
             margin: 18px 0 0;
-            color: #fff;
-            font-size: clamp(2rem, 4vw, 3.1rem);
-            line-height: 1.05;
+            color: #0369a1;
+            font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+            line-height: 1.1;
             font-weight: 900;
         }
 
         .auth-heading span {
-            color: #67e8f9;
+            color: #0ea5e9;
         }
 
-        .auth-description {
-            margin: 18px 0 0;
-            color: #cbd5e1;
-            font-size: 1rem;
-            line-height: 1.8;
-            max-width: 560px;
-        }
-
-        .role-cards {
+        .feature-list {
             display: grid;
-            gap: 14px;
-            margin-top: 28px;
+            gap: 12px;
+            margin-top: 24px;
         }
 
-        .role-card {
-            padding: 18px 20px;
-            border-radius: 18px;
-            background: rgba(2, 6, 23, 0.38);
-            border: 1px solid rgba(255,255,255,0.08);
-            display: flex;
-            align-items: flex-start;
-            gap: 16px;
+        .feature-item {
+            padding: 14px 16px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
         }
 
-        .role-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: 14px;
-            display: grid;
-            place-items: center;
-            flex-shrink: 0;
-            font-size: 1.2rem;
-        }
-
-        .role-icon.owner {
-            background: rgba(14, 165, 233, 0.18);
-            color: #67e8f9;
-        }
-
-        .role-icon.employee {
-            background: rgba(16, 185, 129, 0.18);
-            color: #6ee7b7;
-        }
-
-        .role-icon.secure {
-            background: rgba(168, 85, 247, 0.18);
-            color: #c4b5fd;
-        }
-
-        .role-card strong {
+        .feature-item strong {
             display: block;
-            color: #fff;
-            font-size: 1rem;
+            color: #0369a1;
+            font-size: 0.95rem;
             margin-bottom: 4px;
         }
 
-        .role-card p {
-            margin: 0;
-            color: #cbd5e1;
-            font-size: .9rem;
-            line-height: 1.6;
-        }
-
-        .mini-stats {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 14px;
-            margin-top: 28px;
-        }
-
-        .mini-stat {
-            padding: 16px;
-            border-radius: 18px;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.08);
-            text-align: center;
-        }
-
-        .mini-stat strong {
-            display: block;
-            color: #67e8f9;
-            font-size: 1.05rem;
-            margin-bottom: 6px;
-        }
-
-        .mini-stat span {
-            color: #cbd5e1;
-            font-size: .88rem;
+        .feature-item span {
+            color: #475569;
+            font-size: .90rem;
             line-height: 1.6;
         }
 
         .bottom-note {
-            margin-top: 26px;
-            color: var(--bobong-muted);
-            font-size: .92rem;
+            margin-top: 24px;
+            color: #0369a1;
+            opacity: 0.8;
+            font-size: .88rem;
         }
 
         .login-title {
             margin: 0;
-            color: #fff;
-            font-size: 2rem;
+            color: var(--bobong-dark);
+            font-size: 1.8rem;
             font-weight: 900;
         }
 
         .login-subtitle {
-            margin: 10px 0 0;
-            color: #cbd5e1;
-            font-size: 1rem;
-            line-height: 1.7;
+            margin: 6px 0 0;
+            color: var(--bobong-text);
+            font-size: 0.94rem;
+            line-height: 1.6;
         }
 
         .error-box {
-            margin-top: 18px;
-            border-radius: 18px;
-            padding: 14px 16px;
-            background: rgba(239, 68, 68, 0.10);
-            border: 1px solid rgba(239, 68, 68, 0.20);
-            color: #fecaca;
+            margin-top: 14px;
+            border-radius: 14px;
+            padding: 12px 14px;
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.15);
+            color: #c53030;
+            font-size: 0.9rem;
         }
 
         .error-box ul {
@@ -306,9 +251,9 @@
         }
 
         .auth-form {
-            margin-top: 28px;
+            margin-top: 20px;
             display: grid;
-            gap: 18px;
+            gap: 16px;
         }
 
         .form-row {
@@ -319,19 +264,19 @@
 
         .form-group {
             display: grid;
-            gap: 8px;
+            gap: 6px;
         }
 
         .form-label-modern {
-            color: #e2e8f0;
+            color: var(--bobong-dark-soft);
             font-weight: 700;
-            font-size: .92rem;
+            font-size: .88rem;
         }
 
         .form-label-modern .optional {
             color: var(--bobong-muted);
             font-weight: 500;
-            font-size: .82rem;
+            font-size: .80rem;
         }
 
         .input-wrap {
@@ -340,15 +285,15 @@
 
         .form-control-modern {
             width: 100%;
-            min-height: 56px;
-            border-radius: 16px;
-            border: 1px solid rgba(255,255,255,0.10);
-            background: rgba(2, 6, 23, 0.42);
-            color: #fff;
+            min-height: 52px;
+            border-radius: 14px;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: var(--bobong-dark);
             padding: 0 16px;
             outline: none;
             transition: .25s ease;
-            font-size: .95rem;
+            font-size: 0.92rem;
         }
 
         .form-control-modern::placeholder {
@@ -356,8 +301,8 @@
         }
 
         .form-control-modern:focus {
-            border-color: rgba(34, 211, 238, 0.40);
-            box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.08);
+            border-color: #0ea5e9;
+            box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.12);
         }
 
         .form-control-modern.is-invalid {
@@ -369,8 +314,8 @@
         }
 
         .field-error {
-            color: #fca5a5;
-            font-size: .82rem;
+            color: #ef4444;
+            font-size: .80rem;
             margin-top: 2px;
         }
 
@@ -381,15 +326,15 @@
             transform: translateY(-50%);
             border: 0;
             background: transparent;
-            color: #94a3b8;
+            color: #64748b;
             cursor: pointer;
-            font-size: .88rem;
+            font-size: .85rem;
             font-weight: 700;
             padding: 4px 6px;
         }
 
         .password-toggle:hover {
-            color: #e2e8f0;
+            color: var(--bobong-dark);
         }
 
         .password-strength {
@@ -402,13 +347,13 @@
             height: 4px;
             flex: 1;
             border-radius: 99px;
-            background: rgba(255,255,255,0.08);
+            background: #cbd5e1;
             transition: .3s ease;
         }
 
         .strength-bar.active.weak { background: #ef4444; }
         .strength-bar.active.fair { background: #f59e0b; }
-        .strength-bar.active.good { background: #22d3ee; }
+        .strength-bar.active.good { background: #0ea5e9; }
         .strength-bar.active.strong { background: #10b981; }
 
         .strength-text {
@@ -418,69 +363,78 @@
         }
 
         .submit-btn {
-            min-height: 56px;
+            min-height: 52px;
             border: 0;
-            border-radius: 16px;
-            background: linear-gradient(135deg, var(--bobong-primary), var(--bobong-accent));
-            color: #06233a;
+            border-radius: 14px;
+            background: linear-gradient(135deg, var(--bobong-primary), #06b6d4);
+            color: #ffffff;
             font-weight: 900;
-            font-size: 1rem;
+            font-size: 0.95rem;
             cursor: pointer;
-            box-shadow: 0 18px 34px rgba(14, 165, 233, 0.28);
+            box-shadow: 0 8px 16px rgba(14, 165, 233, 0.15);
             transition: .25s ease;
         }
 
         .submit-btn:hover {
             transform: translateY(-1px);
-            box-shadow: 0 22px 42px rgba(14, 165, 233, 0.34);
+            box-shadow: 0 12px 24px rgba(14, 165, 233, 0.20);
         }
 
         .register-row {
             text-align: center;
             color: var(--bobong-muted);
-            font-size: .94rem;
+            font-size: .90rem;
         }
 
         .register-row a {
-            color: #67e8f9;
+            color: var(--bobong-primary);
             font-weight: 700;
             text-decoration: none;
         }
 
         .register-row a:hover {
-            color: #a5f3fc;
+            color: var(--bobong-primary-dark);
         }
 
         @media (max-width: 1024px) {
+            body {
+                overflow: auto;
+            }
+
+            .auth-shell {
+                height: auto;
+                min-height: 100vh;
+                padding: 24px 16px;
+                align-items: center;
+                justify-content: center;
+                background: #f8fafc;
+            }
+
             .auth-container {
                 grid-template-columns: 1fr;
-            }
-
-            .auth-showcase {
-                order: -1;
-            }
-        }
-
-        @media (max-width: 640px) {
-            .auth-shell {
-                padding: 18px 12px;
+                gap: 24px;
+                max-width: 520px;
+                height: auto;
             }
 
             .auth-card,
             .auth-showcase {
-                border-radius: 22px;
-                padding: 22px;
+                height: auto;
+                border-radius: 28px;
+                border: 1px solid var(--bobong-border);
             }
 
-            .login-title {
-                font-size: 1.7rem;
+            .auth-card {
+                padding: 38px 28px;
+                border-right: none;
+            }
+
+            .auth-showcase {
+                padding: 38px 28px;
+                border: 1px solid #bae6fd;
             }
 
             .form-row {
-                grid-template-columns: 1fr;
-            }
-
-            .mini-stats {
                 grid-template-columns: 1fr;
             }
         }
@@ -638,56 +592,26 @@
 
             <div class="auth-showcase">
                 <div>
-                    <div class="auth-badge">Join the Platform</div>
+                    <div class="auth-badge">Professional Operations Platform</div>
 
                     <h3 class="auth-heading">
-                        Start managing your <span>ice plant operations</span> today
+                        Manage your <span>ice plant workflow</span> in one secure platform
                     </h3>
 
-                    <p class="auth-description">
-                        Create your account to access production tracking, inventory management,
-                        sales recording, delivery scheduling, and comprehensive reporting —
-                        all from one unified dashboard.
-                    </p>
-
-                    <div class="role-cards">
-                        <div class="role-card">
-                            <div class="role-icon owner">👑</div>
-                            <div>
-                                <strong>Owner Access</strong>
-                                <p>Full control over all modules — users, reports, settings, inventory, and analytics.</p>
-                            </div>
+                    <div class="feature-list">
+                        <div class="feature-item">
+                            <strong>🔒 Secured Access Control</strong>
+                            <span>Separate workspace for Owner, Staff, and Drivers. Locked functions prevent unauthorized data editing.</span>
                         </div>
 
-                        <div class="role-card">
-                            <div class="role-icon employee">👤</div>
-                            <div>
-                                <strong>Employee Access</strong>
-                                <p>Day-to-day operations — sales, production logs, deliveries, and customer records.</p>
-                            </div>
+                        <div class="feature-item">
+                            <strong>🚚 Delivery & History Tracking</strong>
+                            <span>Live status updates from drivers. Auto-locks transactions to Sales History once fully delivered and paid.</span>
                         </div>
 
-                        <div class="role-card">
-                            <div class="role-icon secure">🔒</div>
-                            <div>
-                                <strong>Secure & Private</strong>
-                                <p>Encrypted passwords and role-based access control to protect your business data.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mini-stats">
-                        <div class="mini-stat">
-                            <strong>Simple</strong>
-                            <span>Quick registration</span>
-                        </div>
-                        <div class="mini-stat">
-                            <strong>Secure</strong>
-                            <span>Encrypted credentials</span>
-                        </div>
-                        <div class="mini-stat">
-                            <strong>Ready</strong>
-                            <span>Instant dashboard access</span>
+                        <div class="feature-item">
+                            <strong>💳 Payment Management</strong>
+                            <span>Easily collect partial balances or process walk-in transactions with real-time stock adjustments.</span>
                         </div>
                     </div>
                 </div>

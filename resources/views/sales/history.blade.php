@@ -47,7 +47,14 @@
                 {{-- Search --}}
                 <div class="xl:col-span-4 col-span-12">
                     <label class="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Search Transaction</label>
-                    <input type="text" name="search" value="{{ request('search') }}" class="form-control text-sm" placeholder="Search Receipt # or Customer...">
+                    <div class="flex gap-2">
+                        <input type="text" name="search" id="historySearch" value="{{ request('search') }}" 
+                               class="form-control text-sm flex-1" placeholder="Search Receipt # or Customer..."
+                               onkeydown="if(event.key==='Enter'){document.getElementById('historyFilterForm').submit();}">
+                        <button type="submit" class="bg-blue-600 text-white px-3 py-2 rounded text-sm font-semibold hover:bg-blue-700 transition shadow-sm whitespace-nowrap">
+                            🔍 Search
+                        </button>
+                    </div>
                 </div>
 
                 {{-- Single Calendar Range Picker --}}
@@ -215,20 +222,6 @@
                         @endforeach
                     </td>
 
-                    <!-- Assigned Vehicle -->
-                    <td class="text-gray-600">
-                        @if($sale->vehicle)
-                            <div class="flex items-center gap-1">
-                                🚗
-                                <span>{{ $sale->vehicle->vehicle_name }}</span>
-                            </div>
-                            <span class="text-xs text-gray-500">
-                                {{ $sale->vehicle->plate_number }}
-                            </span>
-                        @else
-                            <span class="text-gray-400 italic">-</span>
-                        @endif
-                    </td>
 
                     <!-- Encoded By -->
                     <td class="text-gray-600 text-xs font-semibold">
@@ -340,6 +333,10 @@
 flatpickr("#date_range_picker", {
     mode: "range",
     dateFormat: "Y-m-d",
+    disableMobile: true,
+    @if(request('start_date') && request('end_date'))
+    defaultDate: ["{{ request('start_date') }}", "{{ request('end_date') }}"],
+    @endif
     onClose: function(selectedDates, dateStr, instance) {
         if (selectedDates.length === 2) {
             document.getElementById('historyFilterForm').submit();
@@ -357,26 +354,21 @@ function getLocalDate() {
 
 function setHistoryToday() {
     const today = getLocalDate();
-    document.getElementById('h_start_date').value = today;
-    document.getElementById('h_end_date').value = today;
-    document.getElementById('historyFilterForm').submit();
+    window.location.href = `{{ route('sales.history') }}?start_date=${today}&end_date=${today}`;
 }
 
 function setHistoryThisWeek() {
     const now = new Date();
     const dayOfWeek = now.getDay();
     const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-    const mondayDate = new Date(now.setDate(diff));
-    
-    const start = mondayDate.getFullYear() + '-' + 
-                  String(mondayDate.getMonth() + 1).padStart(2, '0') + '-' + 
-                  String(mondayDate.getDate()).padStart(2, '0');
-    
-    const end = getLocalDate();
+    const monday = new Date(new Date().setDate(diff));
 
-    document.getElementById('h_start_date').value = start;
-    document.getElementById('h_end_date').value = end;
-    document.getElementById('historyFilterForm').submit();
+    const start = monday.getFullYear() + '-' +
+                  String(monday.getMonth() + 1).padStart(2, '0') + '-' +
+                  String(monday.getDate()).padStart(2, '0');
+
+    const end = getLocalDate();
+    window.location.href = `{{ route('sales.history') }}?start_date=${start}&end_date=${end}`;
 }
 
 function viewReceipt(saleId, receiptNumber, btn) {

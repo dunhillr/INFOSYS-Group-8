@@ -29,9 +29,10 @@ class SaleController extends Controller
     {
         $query = Sale::with(['saleItems.product', 'customer', 'user', 'vehicle', 'delivery'])->latest();
 
-        // Apply Active Sales Logic: 
+        // Apply Active Sales Logic:
         // 1. Walk-ins that are NOT yet fully paid (Ongoing collections)
         // 2. OR Deliveries that are Pending or In Transit (Ongoing logistics)
+        // 3. OR Deliveries that are DELIVERED but payment is still partial/unpaid
         $query->where(function($q) {
             $q->where(function($sub) {
                 $sub->where('delivery_type', 'walk_in')
@@ -39,19 +40,15 @@ class SaleController extends Controller
             })
             ->orWhereHas('delivery', function($sub) {
                 $sub->whereIn('status', ['pending', 'out_for_delivery']);
+            })
+            ->orWhere(function($sub) {
+                // Delivered but still needs payment collection
+                $sub->whereHas('delivery', function($d) {
+                        $d->where('status', 'delivered');
+                    })
+                    ->where('payment_status', '!=', 'paid');
             });
         });
-
-        // Search Filter (Sale # or Customer)
-        if ($request->filled('search')) {
-            $search = trim($request->search);
-            $query->where(function($q) use ($search) {
-                $q->where('sale_number', 'like', "%{$search}%")
-                  ->orWhereHas('customer', function($cq) use ($search) {
-                      $cq->where('customer_name', 'like', "%{$search}%");
-                  });
-            });
-        }
 
         // Payment Status Filter
         if ($request->filled('payment_status')) {
@@ -66,8 +63,9 @@ class SaleController extends Controller
                 $end = \Carbon\Carbon::parse($dates[1], 'Asia/Manila')->endOfDay()->setTimezone('UTC');
                 $query->whereBetween('sale_date', [$start, $end]);
             } else {
-                $date = \Carbon\Carbon::parse($dates[0], 'Asia/Manila')->startOfDay()->setTimezone('UTC');
-                $query->whereDate('sale_date', $date);
+                $start = \Carbon\Carbon::parse($dates[0], 'Asia/Manila')->startOfDay()->setTimezone('UTC');
+                $end = \Carbon\Carbon::parse($dates[0], 'Asia/Manila')->endOfDay()->setTimezone('UTC');
+                $query->whereBetween('sale_date', [$start, $end]);
             }
         } elseif ($request->filled('start_date') && $request->filled('end_date')) {
             // Fallback for shortcut buttons
@@ -260,6 +258,10 @@ class SaleController extends Controller
             if ($sale->delivery->status === 'out_for_delivery') {
                 return redirect()->route('sales.index')->with('error', '⚠️ Hindi na maaaring i-edit ang transaction na ito dahil ang delivery ay kasalukuyang nasa byahe (In Transit). Maaari mo lamang itong i-cancel o i-manage sa Deliveries page.');
             }
+            if ($sale->delivery->status === 'delivered' && $sale->payment_status !== 'paid') {
+                // Delivered but still has a balance — go to collect payment view
+                return view('sales.collect_payment', compact('sale'));
+            }
             if (in_array($sale->delivery->status, ['delivered', 'cancelled'])) {
                 return redirect()->route('sales.index')->with('error', '⚠️ Hindi na maaaring i-edit ang transaction na ito dahil tapos na o cancelled na ang delivery.');
             }
@@ -316,7 +318,13 @@ class SaleController extends Controller
 
     public function update(Request $request, Sale $sale): RedirectResponse
     {
-        // Block update if delivery is in transit or completed
+        // If coming from the Collect Payment view, handle FIRST before any lock checks.
+        // This allows collecting balance even for delivered sales that are still partially paid.
+        if ($request->has('is_collect_payment')) {
+            return $this->updatePayment($request, $sale);
+        }
+
+        // Block update if delivery is in transit or completed (only for full edits, not payment collection)
         if ($sale->delivery_type === 'delivery' && $sale->delivery) {
             if ($sale->delivery->status === 'out_for_delivery') {
                 return redirect()->route('sales.index')->with('error', '⚠️ Hindi na maaaring i-edit ang transaction na ito dahil ang delivery ay kasalukuyang nasa byahe (In Transit).');
@@ -324,11 +332,6 @@ class SaleController extends Controller
             if (in_array($sale->delivery->status, ['delivered', 'cancelled'])) {
                 return redirect()->route('sales.index')->with('error', '⚠️ Hindi na maaaring i-edit ang transaction na ito dahil tapos na o cancelled na ang delivery.');
             }
-        }
-
-        // If coming from the Collect Payment view, handle separately
-        if ($request->has('is_collect_payment')) {
-            return $this->updatePayment($request, $sale);
         }
 
         try {
@@ -542,14 +545,23 @@ class SaleController extends Controller
 
         // Apply Archive/History Sales Logic:
         // 1. Walk-ins that are fully PAID (Finished transactions)
-        // 2. OR Deliveries that are Delivered or Cancelled (Finished logistics)
+        // 2. OR Deliveries that are DELIVERED AND fully PAID (both delivery done + payment settled)
+        // 3. OR Deliveries that are CANCELLED (regardless of payment — nothing to collect)
         $query->where(function($q) {
             $q->where(function($sub) {
                 $sub->where('delivery_type', 'walk_in')
                     ->where('payment_status', 'paid');
             })
+            ->orWhere(function($sub) {
+                // Delivered + fully paid → goes to history
+                $sub->whereHas('delivery', function($d) {
+                        $d->where('status', 'delivered');
+                    })
+                    ->where('payment_status', 'paid');
+            })
             ->orWhereHas('delivery', function($sub) {
-                $sub->whereIn('status', ['delivered', 'cancelled']);
+                // Cancelled deliveries always go to history
+                $sub->where('status', 'cancelled');
             });
         });
 
@@ -573,8 +585,9 @@ class SaleController extends Controller
                 $query->whereBetween('sale_date', [$start, $end]);
             } else {
                 // Single date selected
-                $date = \Carbon\Carbon::parse($dates[0], 'Asia/Manila')->startOfDay()->setTimezone('UTC');
-                $query->whereDate('sale_date', $date);
+                $start = \Carbon\Carbon::parse($dates[0], 'Asia/Manila')->startOfDay()->setTimezone('UTC');
+                $end = \Carbon\Carbon::parse($dates[0], 'Asia/Manila')->endOfDay()->setTimezone('UTC');
+                $query->whereBetween('sale_date', [$start, $end]);
             }
         } elseif ($request->filled('start_date') && $request->filled('end_date')) {
             // Fallback for Today/This Week buttons

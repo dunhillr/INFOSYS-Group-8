@@ -28,7 +28,14 @@
                 {{-- Search --}}
                 <div class="xl:col-span-3 col-span-12">
                     <label class="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Search</label>
-                    <input type="text" name="search" value="{{ request('search') }}" class="form-control text-sm" placeholder="Sale #, Customer, Plate...">
+                    <div class="flex gap-2">
+                        <input type="text" name="search" id="deliverySearch" value="{{ request('search') }}" 
+                               class="form-control text-sm flex-1" placeholder="Sale #, Customer, Plate..."
+                               onkeydown="if(event.key==='Enter'){document.getElementById('filterForm').submit();}">
+                        <button type="submit" class="bg-blue-600 text-white px-3 py-2 rounded text-sm font-semibold hover:bg-blue-700 transition shadow-sm whitespace-nowrap">
+                            🔍
+                        </button>
+                    </div>
                 </div>
 
                 {{-- Status Filter --}}
@@ -99,6 +106,10 @@
 flatpickr("#date_range_picker", {
     mode: "range",
     dateFormat: "Y-m-d",
+    disableMobile: true,
+    @if(request('start_date') && request('end_date'))
+    defaultDate: ["{{ request('start_date') }}", "{{ request('end_date') }}"],
+    @endif
     onClose: function(selectedDates, dateStr, instance) {
         if (selectedDates.length === 2) {
             document.getElementById('filterForm').submit();
@@ -116,26 +127,21 @@ function getLocalDate() {
 
 function setToday() {
     const today = getLocalDate();
-    document.getElementById('start_date').value = today;
-    document.getElementById('end_date').value = today;
-    document.getElementById('filterForm').submit();
+    window.location.href = `{{ route('deliveries.index') }}?start_date=${today}&end_date=${today}`;
 }
 
 function setThisWeek() {
     const now = new Date();
-    const dayOfWeek = now.getDay(); // 0 is Sunday, 1 is Monday
-    const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Adjust for Monday start
-    const monday = new Date(now.setDate(diff));
-    
-    const start = monday.getFullYear() + '-' + 
-                  String(monday.getMonth() + 1).padStart(2, '0') + '-' + 
-                  String(monday.getDate()).padStart(2, '0');
-    
-    const end = getLocalDate();
+    const dayOfWeek = now.getDay();
+    const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+    const monday = new Date(new Date().setDate(diff));
 
-    document.getElementById('start_date').value = start;
-    document.getElementById('end_date').value = end;
-    document.getElementById('filterForm').submit();
+    const start = monday.getFullYear() + '-' +
+                  String(monday.getMonth() + 1).padStart(2, '0') + '-' +
+                  String(monday.getDate()).padStart(2, '0');
+
+    const end = getLocalDate();
+    window.location.href = `{{ route('deliveries.index') }}?start_date=${start}&end_date=${end}`;
 }
 </script>
 
