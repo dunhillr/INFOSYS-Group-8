@@ -54,6 +54,9 @@ class ProductController extends Controller
 
     public function destroy(Request $request, Product $product): RedirectResponse
     {
+        if (!Auth::user()->isOwner()) {
+            abort(403, 'Unauthorized action.');
+        }
         $id = $product->id;
         $product->delete();
         ActivityLogService::log(Auth::id(), 'delete', 'products', 'Deleted product #'.$id, $request);

@@ -45,6 +45,9 @@ class CustomerController extends Controller
 
     public function destroy(Request $request, Customer $customer): RedirectResponse
     {
+        if (!Auth::user()->isOwner()) {
+            abort(403, 'Unauthorized action.');
+        }
         $id = $customer->id;
         $customer->delete();
         ActivityLogService::log(Auth::id(), 'delete', 'customers', 'Deleted customer #'.$id, $request);

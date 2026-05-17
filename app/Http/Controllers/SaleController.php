@@ -27,7 +27,7 @@ class SaleController extends Controller
 
     public function index(Request $request): View
     {
-        $query = Sale::with(['saleItems.product', 'customer', 'user', 'vehicle'])->latest();
+        $query = Sale::with(['saleItems.product', 'customer', 'user', 'vehicle', 'delivery'])->latest();
 
         // Apply Active Sales Logic: 
         // 1. Walk-ins that are NOT yet fully paid (Ongoing collections)
@@ -85,6 +85,7 @@ class SaleController extends Controller
         $customers   = Customer::orderBy('customer_name')->get();
         $products    = Product::where('is_active', true)->orderBy('product_name')->get()->map(function($product) {
             $product->available_stock = $this->inventoryService->getAvailableStock($product->id);
+            $product->reserved_stock = $this->inventoryService->getReservedStock($product->id);
             return $product;
         });
         $inventories = Inventory::whereNotNull('product_id')->get()->keyBy('product_id');
@@ -254,7 +255,18 @@ class SaleController extends Controller
 
     public function edit(Sale $sale): View
     {
-        if ($sale->payment_status === 'partial') {
+        // Block editing if delivery is in transit or completed
+        if ($sale->delivery_type === 'delivery' && $sale->delivery) {
+            if ($sale->delivery->status === 'out_for_delivery') {
+                return redirect()->route('sales.index')->with('error', '⚠️ Hindi na maaaring i-edit ang transaction na ito dahil ang delivery ay kasalukuyang nasa byahe (In Transit). Maaari mo lamang itong i-cancel o i-manage sa Deliveries page.');
+            }
+            if (in_array($sale->delivery->status, ['delivered', 'cancelled'])) {
+                return redirect()->route('sales.index')->with('error', '⚠️ Hindi na maaaring i-edit ang transaction na ito dahil tapos na o cancelled na ang delivery.');
+            }
+        }
+
+        // Only go to simplified Collect Balance for Walk-in partial sales
+        if ($sale->delivery_type === 'walk_in' && $sale->payment_status === 'partial') {
             return view('sales.collect_payment', compact('sale'));
         }
 
@@ -263,10 +275,19 @@ class SaleController extends Controller
         $products = Product::where('is_active', true)->orderBy('product_name')->get()->map(function($product) use ($sale) {
             // Get base available stock
             $available = $this->inventoryService->getAvailableStock($product->id);
+            $reserved = $this->inventoryService->getReservedStock($product->id);
             
             // If this sale already occupies some of that stock (either reserved or deducted), add it back to "available" for editing purposes
             $currentSaleQty = $sale->saleItems->where('product_id', $product->id)->sum('quantity');
             $product->available_stock = $available + $currentSaleQty;
+            
+            // If the sale is a delivery, its items are currently counted as "reserved".
+            // Since we added it back to "available", we should deduct it from "reserved" to prevent double-counting.
+            if ($sale->delivery_type === 'delivery') {
+                $product->reserved_stock = max(0, $reserved - $currentSaleQty);
+            } else {
+                $product->reserved_stock = $reserved;
+            }
             
             return $product;
         });
@@ -295,6 +316,16 @@ class SaleController extends Controller
 
     public function update(Request $request, Sale $sale): RedirectResponse
     {
+        // Block update if delivery is in transit or completed
+        if ($sale->delivery_type === 'delivery' && $sale->delivery) {
+            if ($sale->delivery->status === 'out_for_delivery') {
+                return redirect()->route('sales.index')->with('error', '⚠️ Hindi na maaaring i-edit ang transaction na ito dahil ang delivery ay kasalukuyang nasa byahe (In Transit).');
+            }
+            if (in_array($sale->delivery->status, ['delivered', 'cancelled'])) {
+                return redirect()->route('sales.index')->with('error', '⚠️ Hindi na maaaring i-edit ang transaction na ito dahil tapos na o cancelled na ang delivery.');
+            }
+        }
+
         // If coming from the Collect Payment view, handle separately
         if ($request->has('is_collect_payment')) {
             return $this->updatePayment($request, $sale);
@@ -340,25 +371,46 @@ class SaleController extends Controller
                 $balanceDue = $totalAmount;
 
                 // Check Vehicle Capacity if a vehicle is assigned
-                if (!empty($data['vehicle_id'])) {
+                if (!empty($data['vehicle_id']) && $data['delivery_type'] !== 'walk_in') {
                     $vehicle = Vehicle::findOrFail($data['vehicle_id']);
+                    
+                    // Calculate weight load of OTHER active deliveries for this vehicle (excluding current sale)
+                    $otherLoad = \App\Models\Delivery::where('vehicle_id', $vehicle->id)
+                        ->where('sale_id', '!=', $sale->id)
+                        ->whereIn('status', ['pending', 'out_for_delivery'])
+                        ->with('sale.saleItems.product')
+                        ->get()
+                        ->sum(function ($delivery) {
+                            return $delivery->sale->saleItems->sum(function ($item) {
+                                return (float) $item->quantity * (float) ($item->product->weight_kg ?? 0);
+                            });
+                        });
+
                     $totalWeight = 0;
                     foreach ($items as $item) {
                         $product = Product::findOrFail($item['product_id']);
                         $totalWeight += ($item['quantity'] * ($product->weight_kg ?? 0));
                     }
 
-                    if ($totalWeight > $vehicle->capacity) {
-                        throw new RuntimeException("Vehicle capacity exceeded! Total weight: " . number_format($totalWeight, 2) . "kg, Vehicle capacity: " . number_format($vehicle->capacity, 2) . "kg");
+                    if (($otherLoad + $totalWeight) > $vehicle->capacity) {
+                        throw new RuntimeException("Vehicle capacity exceeded! Total weight on vehicle would be " . number_format($otherLoad + $totalWeight, 2) . "kg, but Max capacity is " . number_format($vehicle->capacity, 2) . "kg");
                     }
                 }
 
-                if ($paymentStatus === 'paid') {
+                // Handle overpayment / return change logic
+                $oldAmountPaid = (float) $sale->amount_paid;
+                if ($oldAmountPaid > $totalAmount) {
                     $amountPaid = $totalAmount;
                     $balanceDue = 0;
-                } elseif ($paymentStatus === 'partial') {
-                    $amountPaid = (float) ($data['amount_paid'] ?? 0);
-                    $balanceDue = max(0, $totalAmount - $amountPaid);
+                    $paymentStatus = 'paid';
+                } else {
+                    if ($paymentStatus === 'paid') {
+                        $amountPaid = $totalAmount;
+                        $balanceDue = 0;
+                    } elseif ($paymentStatus === 'partial') {
+                        $amountPaid = (float) ($data['amount_paid'] ?? 0);
+                        $balanceDue = max(0, $totalAmount - $amountPaid);
+                    }
                 }
 
                 $oldVehicleId = $sale->vehicle_id;
@@ -395,21 +447,33 @@ class SaleController extends Controller
                     }
                 }
 
-                // Handle vehicle status changes
+                // Handle Delivery table sync
                 $newVehicleId = $data['vehicle_id'] ?? null;
-
-                // If vehicle assignment was changed
-                if ($oldVehicleId !== $newVehicleId) {
-                    // Revert old vehicle status back to "available" if it was assigned
-                    if ($oldVehicleId) {
-                        Vehicle::where('id', $oldVehicleId)->update(['status' => 'available']);
-                    }
-
-                    // Update new vehicle status to "reserved" if a vehicle is now assigned
-                    if ($newVehicleId && $data['delivery_type'] !== 'walk_in') {
-                        Vehicle::where('id', $newVehicleId)->update(['status' => 'reserved']);
+                if ($data['delivery_type'] !== 'walk_in') {
+                    $customer = Customer::find($data['customer_id'] ?? null);
+                    \App\Models\Delivery::updateOrCreate(
+                        ['sale_id' => $sale->id],
+                        [
+                            'customer_id' => $data['customer_id'] ?? null,
+                            'vehicle_id' => $newVehicleId,
+                            'destination' => $customer && $customer->customer_address ? $customer->customer_address : 'Not specified',
+                        ]
+                    );
+                } else {
+                    // Transitioned to walk-in, delete the active delivery record if any
+                    if ($sale->delivery) {
+                        $sale->delivery->delete();
                     }
                 }
+
+                // Global safety sync for vehicle statuses (prevents orphaned "reserved" state)
+                $reservedVehicleIds = \App\Models\Delivery::whereIn('status', ['pending', 'out_for_delivery'])
+                    ->pluck('vehicle_id')
+                    ->filter()
+                    ->unique();
+
+                Vehicle::whereIn('id', $reservedVehicleIds)->update(['status' => 'reserved']);
+                Vehicle::whereNotIn('id', $reservedVehicleIds)->update(['status' => 'available']);
 
                 ActivityLogService::log(Auth::id(), 'update', 'sales', 'Updated sale #'.$sale->id, $request);
             });
@@ -474,7 +538,7 @@ class SaleController extends Controller
 
     public function history(Request $request): View
     {
-        $query = Sale::with(['saleItems.product', 'customer', 'vehicle', 'user'])->latest('sale_date');
+        $query = Sale::with(['saleItems.product', 'customer', 'vehicle', 'user', 'delivery'])->latest('sale_date');
 
         // Apply Archive/History Sales Logic:
         // 1. Walk-ins that are fully PAID (Finished transactions)
