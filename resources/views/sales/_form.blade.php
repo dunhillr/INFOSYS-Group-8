@@ -169,6 +169,24 @@
                 >
             </div>
         </div>
+
+        {{-- Overpayment Change UI Block --}}
+        @if(isset($sale) && $sale->amount_paid > 0)
+        <div id="overpayment_change_box" class="mt-3 bg-green-50 p-4 rounded-xl border border-green-200 shadow-sm hidden">
+            <div class="flex justify-between items-center text-sm mb-1.5">
+                <span class="text-green-800 font-semibold flex items-center gap-1.5">💰 New Total:</span>
+                <span id="new_total_display" class="font-bold text-green-950 text-base">₱0.00</span>
+            </div>
+            <div class="flex justify-between items-center text-sm mb-2 pb-2 border-b border-green-150">
+                <span class="text-green-800 font-semibold flex items-center gap-1.5">💵 Amount Already Paid:</span>
+                <span class="font-bold text-green-950 text-base">₱{{ number_format($sale->amount_paid, 2) }}</span>
+            </div>
+            <div class="flex justify-between items-center text-sm pt-0.5">
+                <span class="text-green-900 font-extrabold flex items-center gap-1.5 text-base">🔄 Change to Return (Isusukli):</span>
+                <span id="change_return_display" class="font-extrabold text-green-600 text-xl tracking-wide">₱0.00</span>
+            </div>
+        </div>
+        @endif
     </div>
 
     <!-- Payment Status -->
@@ -229,7 +247,9 @@
             name: "{{ addslashes($product->product_name) }}",
             price: {{ $product->default_price ?? 0 }},
             weight: {{ $product->weight_kg ?? 0 }},
-            stock: {{ isset($inventories) && isset($inventories[$product->id]) ? $inventories[$product->id]->current_stock : 0 }}
+            physicalStock: {{ isset($inventories) && isset($inventories[$product->id]) ? $inventories[$product->id]->current_stock : 0 }},
+            reservedStock: {{ $product->reserved_stock ?? 0 }},
+            availableStock: {{ $product->available_stock ?? 0 }}
         },
         @endforeach
     ];
@@ -292,7 +312,7 @@
             let options = '<option value="">Select product...</option>';
             productsData.forEach(p => {
                 const selected = p.id == data.product_id ? 'selected' : '';
-                options += `<option value="${p.id}" data-price="${p.price}" data-weight="${p.weight}" data-stock="${p.stock}" ${selected}>${p.name}</option>`;
+                options += `<option value="${p.id}" data-price="${p.price}" data-weight="${p.weight}" data-physical="${p.physicalStock}" data-reserved="${p.reservedStock}" data-available="${p.availableStock}" ${selected}>${p.name}</option>`;
             });
 
             tr.innerHTML = `
@@ -300,7 +320,7 @@
                     <select name="items[${index}][product_id]" class="form-control item-product" required>
                         ${options}
                     </select>
-                    <p class="text-[10px] text-gray-500 mt-1 stock-info"></p>
+                    <div class="text-[10px] text-gray-500 mt-1 stock-info"></div>
                 </td>
                 <td class="px-4 py-2">
                     <input type="number" step="0.01" min="0.01" name="items[${index}][quantity]" class="form-control item-qty calc-trigger" value="${data.quantity || ''}" required placeholder="0">
@@ -331,21 +351,22 @@
                 const option = productSelect.options[productSelect.selectedIndex];
                 if (option.value) {
                     const price = option.getAttribute('data-price');
-                    const stock = option.getAttribute('data-stock');
+                    const physical = option.getAttribute('data-physical');
+                    const reserved = option.getAttribute('data-reserved');
+                    const available = option.getAttribute('data-available');
                     
                     // Only auto-fill if not prepopulated (like from old input) or if user manually changed
                     if (!data.unit_price || productSelect.dataset.changed) {
                         priceInput.value = parseFloat(price).toFixed(2);
                     }
                     
-                    stockInfo.textContent = `Stock: ${parseFloat(stock).toLocaleString('en-US')}`;
-                    if (parseFloat(stock) <= 0) {
-                        stockInfo.classList.add('text-red-500');
-                    } else {
-                        stockInfo.classList.remove('text-red-500');
+                    stockInfo.innerHTML = `📦 Physical: <span class="font-bold text-gray-700">${parseFloat(physical).toLocaleString('en-US')}</span> &nbsp;|&nbsp; 🔵 Reserved: <span class="font-bold text-blue-600">${parseFloat(reserved).toLocaleString('en-US')}</span> &nbsp;|&nbsp; 🟢 Available: <span class="font-bold text-green-600">${parseFloat(available).toLocaleString('en-US')}</span>`;
+                    
+                    if (parseFloat(available) <= 0) {
+                        stockInfo.innerHTML += `<span class="text-red-500 font-bold block mt-0.5">⚠️ Out of Stock! (No available stock)</span>`;
                     }
                 } else {
-                    stockInfo.textContent = '';
+                    stockInfo.innerHTML = '';
                 }
                 calculateTotals();
             }
@@ -491,6 +512,20 @@
 
             const total = Math.max(0, subtotal + deliveryFee - discountValue);
             totalDisplay.value = `₱ ${total.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            // Live Change to Return (Refund) calculation if already paid exceeds new total
+            const alreadyPaid = {{ isset($sale) ? (float)$sale->amount_paid : 0 }};
+            const overpaymentChangeBox = document.getElementById('overpayment_change_box');
+            if (overpaymentChangeBox) {
+                if (alreadyPaid > total) {
+                    overpaymentChangeBox.classList.remove('hidden');
+                    document.getElementById('new_total_display').textContent = `₱${total.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                    const changeToReturn = alreadyPaid - total;
+                    document.getElementById('change_return_display').textContent = `₱${changeToReturn.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                } else {
+                    overpaymentChangeBox.classList.add('hidden');
+                }
+            }
 
             // Calculate Change
             const tendered = parseFloat(amountTenderedInput.value) || 0;

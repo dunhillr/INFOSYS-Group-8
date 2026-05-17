@@ -177,10 +177,36 @@
                     </td>
 
                     <td class="text-gray-600">
-                        <div class="font-semibold">{{ $sale->customer->customer_name ?? 'Walk-in' }}</div>
-                        <span class="text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-wider {{ $sale->delivery_type === 'walk_in' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-purple-50 text-purple-600 border border-purple-100' }}">
-                            {{ $sale->delivery_type === 'walk_in' ? '🚶 Walk-In' : '🚚 Delivery' }}
-                        </span>
+                        <div class="font-semibold text-gray-800 mb-1">{{ $sale->customer->customer_name ?? 'Walk-in' }}</div>
+                        
+                        <div class="flex flex-wrap items-center gap-1.5 mt-1">
+                            {{-- Base Order Type Badge --}}
+                            <span class="text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-wider {{ $sale->delivery_type === 'walk_in' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-purple-50 text-purple-600 border border-purple-100' }}">
+                                {{ $sale->delivery_type === 'walk_in' ? '🚶 Walk-In' : '🚚 Delivery' }}
+                            </span>
+
+                            {{-- Fulfillment / Delivery Status Badge --}}
+                            @if($sale->delivery_type === 'delivery')
+                                @php
+                                    $deliveryStatus = $sale->delivery->status ?? 'pending';
+                                    if ($deliveryStatus === 'out_for_delivery') {
+                                        $badgeClass = 'bg-blue-50 text-blue-700 border-blue-200';
+                                        $statusLabel = '🚚 In Transit';
+                                    } else {
+                                        $badgeClass = 'bg-yellow-50 text-yellow-700 border-yellow-200';
+                                        $statusLabel = '⏳ Pending';
+                                    }
+                                @endphp
+                                <span class="text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-wider border {{ $badgeClass }}">
+                                    {{ $statusLabel }}
+                                </span>
+                            @else
+                                {{-- Walk-in Fulfillment Status --}}
+                                <span class="text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-wider border bg-green-50 text-green-700 border-green-200">
+                                    🛍️ Pick Up
+                                </span>
+                            @endif
+                        </div>
                     </td>
 
                     <td class="text-gray-800 text-xs">
@@ -231,10 +257,32 @@
                                 👁️ View
                             </button>
 
-                            <a href="{{ route('sales.edit', $sale) }}"
-                               class="bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600 transition font-semibold">
-                                Edit
-                            </a>
+                            @php
+                                $isEditable = true;
+                                $editTooltip = "";
+                                if ($sale->delivery_type === 'delivery' && $sale->delivery) {
+                                    if ($sale->delivery->status === 'out_for_delivery') {
+                                        $isEditable = false;
+                                        $editTooltip = "Hindi pwedeng i-edit habang nasa byahe (In Transit)";
+                                    } elseif (in_array($sale->delivery->status, ['delivered', 'cancelled'])) {
+                                        $isEditable = false;
+                                        $editTooltip = "Hindi pwedeng i-edit dahil tapos na ang delivery";
+                                    }
+                                }
+                            @endphp
+
+                            @if($isEditable)
+                                <a href="{{ route('sales.edit', $sale) }}"
+                                   class="bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600 transition font-semibold">
+                                    Edit
+                                </a>
+                            @else
+                                <button type="button" 
+                                        class="bg-gray-300 text-gray-500 px-3 py-1 rounded text-xs cursor-not-allowed font-semibold"
+                                        title="{{ $editTooltip }}" disabled>
+                                    🔒 Locked
+                                </button>
+                            @endif
 
                             @if(auth()->user()->user_type === 'owner')
                             <form action="{{ route('sales.destroy', $sale) }}" 

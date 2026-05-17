@@ -129,7 +129,6 @@
                     <th>Receipt ID</th>
                     <th>Customer</th>
                     <th>Items</th>
-                    <th>Assigned Vehicle</th>
                     <th>Encoded By</th>
                     <th>Total Amount</th>
                     <th>Payment Status</th>
@@ -160,10 +159,50 @@
 
                     <!-- Customer -->
                     <td class="text-gray-600">
-                        <div class="font-semibold">{{ $sale->customer->customer_name ?? 'Walk-in' }}</div>
-                        <span class="text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-wider {{ $sale->delivery_type === 'walk_in' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-purple-50 text-purple-600 border border-purple-100' }}">
-                            {{ $sale->delivery_type === 'walk_in' ? '🚶 Walk-In' : '🚚 Delivery' }}
-                        </span>
+                        <div class="font-semibold text-gray-800 mb-1">{{ $sale->customer->customer_name ?? 'Walk-in' }}</div>
+                        
+                        <div class="flex flex-wrap items-center gap-1.5 mt-1">
+                            {{-- Base Order Type Badge --}}
+                            <span class="text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-wider {{ $sale->delivery_type === 'walk_in' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-purple-50 text-purple-600 border border-purple-100' }}">
+                                {{ $sale->delivery_type === 'walk_in' ? '🚶 Walk-In' : '🚚 Delivery' }}
+                            </span>
+
+                            {{-- Fulfillment / Delivery Status Badge --}}
+                            @if($sale->delivery_type === 'delivery')
+                                @php
+                                    $deliveryStatus = $sale->delivery->status ?? 'pending';
+                                    $deliveryBadges = [
+                                        'pending' => 'bg-yellow-50 text-yellow-700 border-yellow-200',
+                                        'out_for_delivery' => 'bg-blue-50 text-blue-700 border-blue-200',
+                                        'delivered' => 'bg-green-50 text-green-700 border-green-200',
+                                        'cancelled' => 'bg-red-50 text-red-700 border-red-200',
+                                    ];
+                                    $badgeClass = $deliveryBadges[$deliveryStatus] ?? 'bg-gray-50 text-gray-700 border-gray-200';
+                                    
+                                    $statusLabels = [
+                                        'pending' => '⏳ Pending',
+                                        'out_for_delivery' => '🚚 In Transit',
+                                        'delivered' => '🟢 Delivered',
+                                        'cancelled' => '🔴 Cancelled',
+                                    ];
+                                    $statusLabel = $statusLabels[$deliveryStatus] ?? strtoupper($deliveryStatus);
+                                @endphp
+                                <span class="text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-wider border {{ $badgeClass }}">
+                                    {{ $statusLabel }}
+                                </span>
+                            @else
+                                {{-- Walk-in Fulfillment Status --}}
+                                @if($sale->payment_status === 'paid')
+                                    <span class="text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-wider bg-green-50 text-green-700 border border-green-200">
+                                        🟢 Picked Up
+                                    </span>
+                                @else
+                                    <span class="text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-wider bg-yellow-50 text-yellow-700 border border-yellow-200">
+                                        ⏳ Pending Pickup
+                                    </span>
+                                @endif
+                            @endif
+                        </div>
                     </td>
 
                     <!-- Items -->
