@@ -131,7 +131,8 @@
                         <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Customer</th>
                         <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Destination</th>
                         <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Vehicle</th>
-                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status & Actions</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
@@ -173,13 +174,16 @@
                                         {{ ucwords(str_replace('_', ' ', $delivery->status)) }}
                                     </span>
 
+                                </div>
+                            </td>
+                            <td>
                                     {{-- Quick Actions for Staff/Owner --}}
                                     <div class="flex gap-1 justify-center">
                                         <a href="{{ route('deliveries.edit', $delivery) }}" class="text-blue-500 hover:bg-blue-100 p-2 rounded-lg transition" title="View Details">
                                             <i class="bx bx-show text-lg"></i>
                                         </a>
                                         @if(in_array($delivery->status, ['pending', 'out_for_delivery']))
-                                            <form action="{{ route('deliveries.cancel', $delivery) }}" method="POST" onsubmit="return confirm('Sigurado ka bang i-cancel ang delivery na ito? Ibabalik ng system ang yelo sa inventory.')" class="inline">
+                                            <form action="{{ route('deliveries.cancel', $delivery) }}" method="POST" onsubmit="return confirm('Are you sure you want to cancel this delivery? The system will return the ice to the inventory.')" class="inline">
                                                 @csrf
                                                 <button type="submit" class="text-orange-500 hover:bg-orange-100 p-2 rounded-lg transition" title="Cancel/Failed Delivery">
                                                     <i class="bx bx-x-circle text-lg"></i>
@@ -187,8 +191,7 @@
                                             </form>
                                         @endif
                                     </div>
-                                </div>
-                            </td>
+                                    </td>
                         </tr>
                     @endforeach
                 </tbody>

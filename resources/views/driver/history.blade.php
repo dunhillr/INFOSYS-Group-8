@@ -7,7 +7,7 @@
     {{-- ── BACK & HEADER ── --}}
     <div style="padding: 16px 0; display: flex; justify-content: space-between; align-items: center;">
         <a href="{{ route('driver.index') }}" class="dp-btn dp-btn-back" style="width: auto; display: inline-flex; padding: 10px 16px; font-size: 13px; border-radius: 10px; text-decoration: none;">
-            ← Bumalik
+            ←  Back to Deliveries
         </a>
         <h1 style="font-size: 20px; font-weight: 800; color: #111827; margin: 0;">📋 History</h1>
     </div>
