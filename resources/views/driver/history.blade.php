@@ -60,7 +60,7 @@
                     <div class="dp-row-value">{{ $delivery->destination }}</div>
                 </div>
                 <div class="dp-row">
-                    <div class="dp-row-label">📅 Petsa ng Delivery</div>
+                    <div class="dp-row-label">📅 Date of Delivery</div>
                     <div class="dp-row-value">{{ $delivery->updated_at->timezone('Asia/Manila')->format('M d, Y · h:i A') }}</div>
                 </div>
             </div>
@@ -68,7 +68,7 @@
             {{-- Items summary --}}
             @if($delivery->sale?->saleItems->isNotEmpty())
             <div style="padding: 10px 16px; background: #f8fafc; border-top: 1px solid #f3f4f6;">
-                <div style="font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px;">Mga Item</div>
+                <div style="font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px;">Items</div>
                 @foreach($delivery->sale->saleItems as $item)
                     <div style="font-size: 13px; color: #374151; display: flex; justify-content: space-between;">
                         <span>{{ $item->product->product_name ?? '—' }}</span>
@@ -82,15 +82,15 @@
             <div style="padding: 14px 16px; border-top: 1px solid #f3f4f6;">
                 <a href="{{ route('driver.show', $delivery) }}"
                    style="display: flex; align-items: center; justify-content: center; gap: 8px; background: #f3f4f6; color: #374151; border-radius: 14px; padding: 12px; font-size: 14px; font-weight: 700; text-decoration: none; transition: background .15s;">
-                    🔍 Tingnan ang Detalye
+                    🔍 View Details
                 </a>
             </div>
         </div>
     @empty
         <div class="dp-card" style="padding: 40px 20px; text-align: center;">
             <div style="font-size: 48px; margin-bottom: 12px;">📭</div>
-            <div style="font-size: 17px; font-weight: 700; color: #111827; margin-bottom: 6px;">Walang History</div>
-            <div style="font-size: 13px; color: #6b7280;">Wala ka pang nakukumpletong delivery record.</div>
+            <div style="font-size: 17px; font-weight: 700; color: #111827; margin-bottom: 6px;">No History</div>
+            <div style="font-size: 13px; color: #6b7280;">You don't have any completed delivery records yet.</div>
         </div>
     @endforelse
 

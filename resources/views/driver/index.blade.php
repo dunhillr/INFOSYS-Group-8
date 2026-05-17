@@ -42,10 +42,10 @@
         <div class="dp-card" style="margin-bottom: 20px; border-left: 4px solid #ef4444; background: #fef2f2;">
             <div style="padding: 16px;">
                 <div style="font-size: 13px; font-weight: 700; color: #991b1b; display: flex; align-items: center; gap: 8px;">
-                    ⚠️ Wala kang naka-assign na sasakyan ngayon.
+                    ⚠️ You don't have an assigned vehicle today.
                 </div>
                 <div style="font-size: 12px; color: #b91c1c; margin-top: 4px;">
-                    Makipag-ugnayan sa staff para i-assign ka sa isang truck.
+                    Contact the staff to assign you to a truck.
                 </div>
             </div>
         </div>
@@ -67,7 +67,7 @@
     @if($deliveries->contains('status', 'pending'))
     <form action="{{ route('driver.startTrip') }}" method="POST" style="margin-bottom: 20px;">
         @csrf
-        <button type="submit" onclick="return confirm('Simulan ang buong byahe? Lahat ng pending deliveries ay magiging In Transit.')" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; background: #16a34a; color: #fff; border-radius: 14px; padding: 16px; font-size: 18px; font-weight: 800; text-decoration: none; border: none; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+        <button type="submit" onclick="return confirm('Start the whole trip? All pending deliveries will become In Transit.')" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; background: #16a34a; color: #fff; border-radius: 14px; padding: 16px; font-size: 18px; font-weight: 800; text-decoration: none; border: none; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
             🚚 Start Delivery 
         </button>
     </form>

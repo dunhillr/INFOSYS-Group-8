@@ -7,7 +7,7 @@
     {{-- ── BACK ── --}}
     <div style="padding: 16px 0 8px;">
         <a href="{{ route('driver.index') }}" class="dp-btn dp-btn-back" style="width: auto; display: inline-flex; padding: 10px 16px; font-size: 13px; border-radius: 10px; text-decoration: none;">
-            ← Bumalik sa Listahan
+            ← Back to List
         </a>
     </div>
 
@@ -44,7 +44,7 @@
             <div class="dp-row-value">{{ $delivery->destination }}</div>
         </div>
         <div class="dp-row">
-            <div class="dp-row-label">🚛 Sasakyan</div>
+            <div class="dp-row-label">🚛 Vehicle</div>
             <div class="dp-row-value">
                 {{ $delivery->vehicle->vehicle_name ?? 'Unassigned' }}
                 @if($delivery->vehicle?->plate_number)
@@ -53,11 +53,11 @@
             </div>
         </div>
         <div class="dp-row">
-            <div class="dp-row-label">📅 Petsa</div>
+            <div class="dp-row-label">📅 Date</div>
             <div class="dp-row-value">{{ $delivery->delivery_date->format('F j, Y') }}</div>
         </div>
         <div class="dp-row">
-            <div class="dp-row-label">🕐 Oras</div>
+            <div class="dp-row-label">🕐 Time</div>
             <div class="dp-row-value">{{ \Carbon\Carbon::parse($delivery->delivery_time)->format('h:i A') }}</div>
         </div>
     </div>
@@ -66,7 +66,7 @@
     @if($delivery->sale?->saleItems->isNotEmpty())
     <div class="dp-card" style="margin-bottom: 12px;">
         <div style="padding: 12px 16px; border-bottom: 1px solid #f3f4f6;">
-            <div style="font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing:.5px;">📦 Mga Ire-deliver</div>
+            <div style="font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing:.5px;">📦 To Deliver</div>
         </div>
         @foreach($delivery->sale->saleItems as $item)
         <div class="dp-row">
@@ -84,7 +84,7 @@
     <div class="dp-card" style="padding: 20px; margin-bottom: 12px;">
         <div style="font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 6px;">📸 Proof of Delivery</div>
         <div style="font-size: 12px; color: #6b7280; margin-bottom: 16px;">
-            Kumuha ng litrato ng <strong>pinirmahang resibo</strong> o ng <strong>na-deliver na yelo</strong> bago i-confirm. Required ito.
+            Take a photo of the <strong>delivered ice</strong> before confirming. This is required.
         </div>
 
         <form method="POST" action="{{ route('driver.confirm', $delivery) }}" enctype="multipart/form-data" id="confirmForm">
@@ -94,8 +94,8 @@
             <label for="proof_photo" style="display: block; margin-bottom: 12px;">
                 <div id="upload-area" style="border: 2px dashed #d1d5db; border-radius: 14px; padding: 24px 16px; text-align: center; cursor: pointer; transition: border-color .2s; background: #f9fafb;">
                     <div style="font-size: 36px; margin-bottom: 8px;" id="upload-icon">📷</div>
-                    <div style="font-size: 14px; font-weight: 700; color: #374151;" id="upload-title">I-tap para kumuha ng litrato</div>
-                    <div style="font-size: 12px; color: #6b7280; margin-top: 4px;" id="upload-sub">o pumili ng file mula sa gallery</div>
+                    <div style="font-size: 14px; font-weight: 700; color: #374151;" id="upload-title">Take a photo of the delivered ice</div>
+                    <div style="font-size: 12px; color: #6b7280; margin-top: 4px;" id="upload-sub">or select a file from the gallery</div>
                 </div>
                 <input type="file" name="proof_of_delivery" id="proof_photo"
                        accept="image/*" capture="environment"
@@ -118,8 +118,8 @@
 
             <button type="submit" class="dp-btn dp-btn-confirm" id="submitBtn" disabled
                 style="opacity: .4; cursor: not-allowed;"
-                onclick="return confirm('I-confirm na ang delivery? Tiyakin na tama ang lahat bago i-submit.')">
-                ✅ I-confirm ang Delivery
+                onclick="return confirm('Confirm the delivery? Make sure everything is correct before submitting.')">
+                Confirm Delivery
             </button>
         </form>
     </div>
@@ -128,8 +128,8 @@
     {{-- ALREADY DELIVERED --}}
     <div class="dp-card" style="padding: 20px; text-align: center; margin-bottom: 12px;">
         <div style="font-size: 48px; margin-bottom: 10px;">✅</div>
-        <div style="font-size: 16px; font-weight: 800; color: #16a34a;">Nai-deliver na!</div>
-        <div style="font-size: 13px; color: #6b7280; margin-top: 6px;">Ang delivery na ito ay natapos na. Salamat sa mahusay na trabaho!</div>
+        <div style="font-size: 16px; font-weight: 800; color: #16a34a;">Successfully Delivered!</div>
+        <div style="font-size: 13px; color: #6b7280; margin-top: 6px;">This delivery has been completed. Thank you for your hard work!</div>
 
         @if($delivery->proof_of_delivery)
         <div style="margin-top: 14px; border-radius: 12px; overflow: hidden; border: 2px solid #bbf7d0;">
