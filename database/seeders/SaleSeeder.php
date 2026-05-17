@@ -14,8 +14,9 @@ class SaleSeeder extends Seeder
 {
     public function run(): void
     {
-        $owner = User::where('username', 'owner')->first();
-        $employee = User::where('username', 'employee')->first();
+        $owner = User::where('username', 'bobongowner')->first() ?? User::where('username', 'owner')->first();
+        $bea = User::where('username', 'beatoos')->first() ?? $owner;
+        $vengie = User::where('username', 'vengiecabanilla')->first() ?? $owner;
         $inventoryService = app(InventoryService::class);
 
         $customers = Customer::all();
@@ -49,7 +50,7 @@ class SaleSeeder extends Seeder
                 'unit_price' => 100.00,
                 'payment_status' => 'partial',
                 'notes' => 'Block ice for catering',
-                'user_id' => $employee->id,
+                'user_id' => $bea->id,
             ],
             [
                 'product_id' => $products->first()->id ?? 1,
@@ -60,7 +61,7 @@ class SaleSeeder extends Seeder
                 'unit_price' => 25.00,
                 'payment_status' => 'paid',
                 'notes' => 'Walk-in retail order',
-                'user_id' => $owner->id,
+                'user_id' => $vengie->id,
             ],
             [
                 'product_id' => $products->get(2)?->id ?? $products->first()->id ?? 1,
@@ -71,7 +72,7 @@ class SaleSeeder extends Seeder
                 'unit_price' => 15.00,
                 'payment_status' => 'pending',
                 'notes' => 'Crushed ice wholesale',
-                'user_id' => $employee->id,
+                'user_id' => $bea->id,
             ],
             [
                 'product_id' => $products->get(3)?->id ?? $products->first()->id ?? 1,
@@ -93,7 +94,7 @@ class SaleSeeder extends Seeder
                 'unit_price' => 25.00,
                 'payment_status' => 'paid',
                 'notes' => 'Large wholesale daily order',
-                'user_id' => $employee->id,
+                'user_id' => $vengie->id,
             ],
         ];
 

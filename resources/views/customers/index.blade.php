@@ -81,6 +81,7 @@
                             Edit
                         </a>
 
+                        @if(Auth::user()->isOwner())
                         <form action="{{ route('customers.destroy', $customer) }}" 
                               method="POST" 
                               onsubmit="return confirm('Delete this record?')">
@@ -91,6 +92,7 @@
                                 Delete
                             </button>
                         </form>
+                        @endif
 
                     </td>
 

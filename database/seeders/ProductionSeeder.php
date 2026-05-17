@@ -13,7 +13,10 @@ class ProductionSeeder extends Seeder
 {
     public function run(): void
     {
-        $owner = User::where('username', 'owner')->first();
+        $owner = User::where('username', 'bobongowner')->first() ?? User::where('username', 'owner')->first();
+        $bea = User::where('username', 'beatoos')->first() ?? $owner;
+        $vengie = User::where('username', 'vengiecabanilla')->first() ?? $owner;
+
         $inventoryService = app(InventoryService::class);
 
         // Get products by name
@@ -38,7 +41,7 @@ class ProductionSeeder extends Seeder
                 'product_id' => $blockIce?->id,
                 'quantity_produced' => 300.00,
                 'remarks' => 'Block Ice production',
-                'user_id' => $owner->id,
+                'user_id' => $bea->id,
             ],
             [
                 'production_date' => now()->subDays(3)->toDateString(),
@@ -46,7 +49,7 @@ class ProductionSeeder extends Seeder
                 'product_id' => $crushedIce?->id,
                 'quantity_produced' => 250.00,
                 'remarks' => 'Crushed Ice batch',
-                'user_id' => $owner->id,
+                'user_id' => $vengie->id,
             ],
             [
                 'production_date' => now()->subDays(2)->toDateString(),
@@ -54,7 +57,7 @@ class ProductionSeeder extends Seeder
                 'product_id' => $flakeIce?->id,
                 'quantity_produced' => 400.00,
                 'remarks' => 'Flake Ice production',
-                'user_id' => $owner->id,
+                'user_id' => $bea->id,
             ],
             [
                 'production_date' => now()->subDays(1)->toDateString(),
@@ -70,7 +73,7 @@ class ProductionSeeder extends Seeder
                 'product_id' => $crushedIce?->id,
                 'quantity_produced' => 450.00,
                 'remarks' => 'Today\'s Crushed Ice production run',
-                'user_id' => $owner->id,
+                'user_id' => $vengie->id,
             ],
             [
                 'production_date' => now()->toDateString(),
@@ -78,7 +81,7 @@ class ProductionSeeder extends Seeder
                 'product_id' => $blockIce?->id,
                 'quantity_produced' => 200.00,
                 'remarks' => 'Today\'s Block Ice production run',
-                'user_id' => $owner->id,
+                'user_id' => $bea->id,
             ],
             [
                 'production_date' => now()->toDateString(),

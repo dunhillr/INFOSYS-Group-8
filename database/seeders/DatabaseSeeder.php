@@ -31,13 +31,13 @@ class DatabaseSeeder extends Seeder
         $this->call(UserSeeder::class);
 
         // 3. Seed products, customers, and vehicles (inventory is auto-created per product)
-        $this->call(ProductSeeder::class);
-        $this->call(CustomerSeeder::class);
-        $this->call(VehicleSeeder::class);
+        // $this->call(ProductSeeder::class);
+        // $this->call(CustomerSeeder::class);
+        // $this->call(VehicleSeeder::class);
 
         // 5. Seed operations (production, sales, deliveries)
-        $this->call(ProductionSeeder::class);
-        $this->call(SaleSeeder::class);
-        $this->call(DeliverySeeder::class);
+        // $this->call(ProductionSeeder::class);
+        // $this->call(SaleSeeder::class);
+        // $this->call(DeliverySeeder::class);
     }
 }
